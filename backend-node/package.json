@@ -1,0 +1,23 @@
+{
+  "name": "drmed-portal-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure backend for DRMed patient portal (Google Sheets + Google Drive)",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "oauth:drive-token": "node scripts/generate-drive-refresh-token.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "googleapis": "^144.0.0",
+    "helmet": "^8.0.0"
+  }
+}
