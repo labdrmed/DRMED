@@ -1,0 +1,62 @@
+services:
+  - type: web
+    name: drmed-portal-backend
+    runtime: node
+    rootDir: backend-node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STRICT_SECURITY_MODE
+        value: "true"
+      - key: SHEET_ID
+        sync: false
+      - key: SHEET_NAME
+        value: Sheet1
+      - key: PATIENT_MASTER_SHEET_ID
+        value: 1myhJUHFMoml-aAgcs5Y7rKaavgDsHqTyq4yeEAl23nM
+      - key: PATIENT_MASTER_SHEET_NAME
+        value: PATIENT MASTER REVIEWED
+      - key: MAX_PATIENT_SEARCH_RESULTS
+        value: "30"
+      - key: RESULT_STORAGE
+        value: drive
+      - key: DRIVE_FOLDER_ID
+        sync: false
+      - key: DRIVE_AUTH_MODE
+        value: oauth_user
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_OAUTH_REDIRECT_URI
+        value: http://localhost:8085/oauth2/callback
+      - key: GOOGLE_OAUTH_REFRESH_TOKEN
+        sync: false
+      - key: ALLOWED_ORIGIN
+        sync: false
+      - key: REQUIRE_PORTAL_CONSENT
+        value: "true"
+      - key: REQUIRE_PORTAL_CAPTCHA
+        value: "true"
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: ENABLE_CONSENT_AUDIT_LOG
+        value: "true"
+      - key: CONSENT_NOTICE_VERSION
+        value: "2026-03-08"
+      - key: CONSENT_LOG_TO_SHEETS
+        value: "true"
+      - key: CONSENT_LOG_SHEET_NAME
+        value: ConsentLogs
+      - key: PORTAL_ACCESS_TOKEN_SECRET
+        sync: false
+      - key: STAFF_GATE_USERS_JSON
+        sync: false
+      - key: STAFF_SESSION_TOKEN_SECRET
+        sync: false
+      - key: ENABLE_STAFF_AUDIT_LOG
+        value: "true"
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
