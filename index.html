@@ -553,6 +553,7 @@
       if (window.location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1') return 'http://localhost:8080';
       if (host === 'drmed.visionsbyiso.com') return 'https://api.drmed.visionsbyiso.com';
       if (host === 'drmed.ph' || host === 'www.drmed.ph') return 'https://api.drmed.ph';
+      if (host === 'staff.drmed.ph' || host === 'www.staff.drmed.ph') return 'https://api.staff.drmed.ph';
       if (!host.startsWith('api.') && host.includes('.')) return 'https://api.' + host;
       return window.location.origin;
     }
