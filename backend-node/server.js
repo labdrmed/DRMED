@@ -12,6 +12,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { Readable } = require('node:stream');
+const { runSync: runPatientMasterSync } = require('./scripts/sync_patient_master_from_customer_list');
 
 const NODE_ENV = String(process.env.NODE_ENV || 'development').trim().toLowerCase();
 const STRICT_SECURITY_MODE = (() => {
@@ -27,6 +28,11 @@ const SHEET_ID = process.env.SHEET_ID || '1O09S6_hRv-c7irI_HJtbYraWSXQs08IET0-bq
 const SHEET_NAME = process.env.SHEET_NAME || 'Sheet1';
 const PATIENT_MASTER_SHEET_ID = process.env.PATIENT_MASTER_SHEET_ID || SHEET_ID;
 const PATIENT_MASTER_SHEET_NAME = process.env.PATIENT_MASTER_SHEET_NAME || 'PATIENT MASTER REVIEWED';
+const SYNC_SOURCE_SPREADSHEET_ID = process.env.SYNC_SOURCE_SPREADSHEET_ID || '';
+const SYNC_SOURCE_SHEET_NAME = process.env.SYNC_SOURCE_SHEET_NAME || 'CUSTOMER LIST';
+const SYNC_TARGET_SPREADSHEET_ID = process.env.SYNC_TARGET_SPREADSHEET_ID || PATIENT_MASTER_SHEET_ID;
+const SYNC_TARGET_SHEET_NAME = process.env.SYNC_TARGET_SHEET_NAME || PATIENT_MASTER_SHEET_NAME;
+const PATIENT_MASTER_SYNC_WEBHOOK_TOKEN = process.env.PATIENT_MASTER_SYNC_WEBHOOK_TOKEN || '';
 const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID || '';
 const RESULT_STORAGE = String(process.env.RESULT_STORAGE || 'drive').trim().toLowerCase();
 const USE_LOCAL_STORAGE = RESULT_STORAGE === 'local' || RESULT_STORAGE === 'filesystem';
@@ -116,6 +122,12 @@ if (REQUIRE_PORTAL_CAPTCHA && !TURNSTILE_SECRET_KEY) {
 
 if (ENABLE_CONSENT_AUDIT_LOG && !CONSENT_LOG_FILE) {
   console.warn('[WARN] ENABLE_CONSENT_AUDIT_LOG is enabled but CONSENT_LOG_FILE is empty.');
+}
+
+if (PATIENT_MASTER_SYNC_WEBHOOK_TOKEN) {
+  console.warn('[INFO] Patient master sync webhook is enabled.');
+} else {
+  console.warn('[WARN] Patient master sync webhook is disabled. Set PATIENT_MASTER_SYNC_WEBHOOK_TOKEN to enable.');
 }
 
 if (ENABLE_CONSENT_AUDIT_LOG && CONSENT_LOG_TO_SHEETS && !CONSENT_LOG_SHEET_NAME) {
@@ -516,6 +528,7 @@ function verifyTotp(secret, code) {
 }
 
 const staffLockoutState = new Map();
+let patientMasterSyncJob = null;
 
 function getStaffLockoutKey(req, staffUser) {
   const ip = getRequestIp(req) || 'unknown';
@@ -583,6 +596,22 @@ function pickFirst(...vals) {
 function parseBoolean(value) {
   const normalized = String(value || '').trim().toLowerCase();
   return ['1', 'true', 'yes', 'y', 'on', 'accepted'].includes(normalized);
+}
+
+function parseBearerToken(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const match = raw.match(/^Bearer\s+(.+)$/i);
+  return match ? String(match[1] || '').trim() : '';
+}
+
+function resolveSyncWebhookToken(req) {
+  return pickFirst(
+    req.headers && req.headers['x-sync-token'],
+    req.headers && req.headers['x-webhook-token'],
+    parseBearerToken(req.headers && req.headers.authorization),
+    req.query && req.query.token
+  );
 }
 
 function getRequestIp(req) {
@@ -2237,6 +2266,132 @@ app.post('/api/staff/reports/bulk', async (req, res) => {
   } catch (err) {
     console.error('Staff bulk upload error:', err.message);
     return res.status(500).json({ status: 'error', message: err.message || 'Unable to process bulk upload.' });
+  }
+});
+
+app.get('/api/internal/patient-master/sync', async (req, res) => {
+  if (!PATIENT_MASTER_SYNC_WEBHOOK_TOKEN) {
+    return res.status(503).json({
+      status: 'error',
+      message: 'Patient master sync webhook is disabled.'
+    });
+  }
+  const providedToken = resolveSyncWebhookToken(req);
+  if (!providedToken || !timingSafeEquals(providedToken, PATIENT_MASTER_SYNC_WEBHOOK_TOKEN)) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized webhook token.' });
+  }
+  return res.json({
+    status: 'success',
+    inProgress: !!patientMasterSyncJob,
+    startedAt: patientMasterSyncJob ? patientMasterSyncJob.startedAt : ''
+  });
+});
+
+app.post('/api/internal/patient-master/sync', async (req, res) => {
+  if (!PATIENT_MASTER_SYNC_WEBHOOK_TOKEN) {
+    return res.status(503).json({
+      status: 'error',
+      message: 'Patient master sync webhook is disabled.'
+    });
+  }
+
+  const providedToken = resolveSyncWebhookToken(req);
+  if (!providedToken || !timingSafeEquals(providedToken, PATIENT_MASTER_SYNC_WEBHOOK_TOKEN)) {
+    return res.status(401).json({ status: 'error', message: 'Unauthorized webhook token.' });
+  }
+
+  if (patientMasterSyncJob) {
+    return res.status(409).json({
+      status: 'error',
+      message: 'Patient master sync already running.',
+      startedAt: patientMasterSyncJob.startedAt
+    });
+  }
+
+  const sourceSpreadsheetId = pickFirst(
+    req.body && req.body.sourceSpreadsheetId,
+    req.query && req.query.sourceSpreadsheetId,
+    SYNC_SOURCE_SPREADSHEET_ID,
+    PATIENT_MASTER_SHEET_ID,
+    SHEET_ID
+  );
+  const targetSpreadsheetId = pickFirst(
+    req.body && req.body.targetSpreadsheetId,
+    req.query && req.query.targetSpreadsheetId,
+    SYNC_TARGET_SPREADSHEET_ID,
+    PATIENT_MASTER_SHEET_ID,
+    SHEET_ID
+  );
+  const sourceSheet = pickFirst(
+    req.body && req.body.sourceSheet,
+    req.query && req.query.sourceSheet,
+    SYNC_SOURCE_SHEET_NAME,
+    'CUSTOMER LIST'
+  );
+  const targetSheet = pickFirst(
+    req.body && req.body.targetSheet,
+    req.query && req.query.targetSheet,
+    SYNC_TARGET_SHEET_NAME,
+    PATIENT_MASTER_SHEET_NAME
+  );
+  const dryRun = parseBoolean(
+    pickFirst(
+      req.body && req.body.dryRun,
+      req.query && req.query.dryRun
+    )
+  );
+
+  if (!sourceSpreadsheetId || !targetSpreadsheetId) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'sourceSpreadsheetId and targetSpreadsheetId are required.'
+    });
+  }
+
+  const startedAt = new Date().toISOString();
+  patientMasterSyncJob = {
+    startedAt,
+    promise: (async () => {
+      const { sheets } = await getGoogleClients();
+      return runPatientMasterSync({
+        sheets,
+        sourceSpreadsheetId,
+        targetSpreadsheetId,
+        sourceSheet,
+        targetSheet,
+        dryRun
+      });
+    })()
+  };
+
+  try {
+    const summary = await patientMasterSyncJob.promise;
+    await logStaffAuditEvent(req, 'patient_master_sync_webhook', {
+      sourceSpreadsheetId,
+      targetSpreadsheetId,
+      sourceSheet,
+      targetSheet,
+      dryRun,
+      sourceRowsParsed: summary.sourceRowsParsed,
+      uniqueMergedPatients: summary.uniqueMergedPatients,
+      mergedClusters: summary.mergedClusters,
+      needsReview: summary.needsReview,
+      mode: summary.mode
+    });
+    return res.json({
+      status: 'success',
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      summary
+    });
+  } catch (err) {
+    console.error('Patient master sync webhook error:', err.message);
+    return res.status(500).json({
+      status: 'error',
+      message: err.message || 'Patient master sync failed.'
+    });
+  } finally {
+    patientMasterSyncJob = null;
   }
 });
 
