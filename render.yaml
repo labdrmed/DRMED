@@ -18,6 +18,16 @@ services:
         value: 1myhJUHFMoml-aAgcs5Y7rKaavgDsHqTyq4yeEAl23nM
       - key: PATIENT_MASTER_SHEET_NAME
         value: PATIENT MASTER REVIEWED
+      - key: PATIENT_MASTER_SYNC_WEBHOOK_TOKEN
+        sync: false
+      - key: SYNC_SOURCE_SPREADSHEET_ID
+        value: 1E4qc2u8ydG7ob5lNNbGqnx_gtnujjKBCGheOj6Rz2AM
+      - key: SYNC_SOURCE_SHEET_NAME
+        value: CUSTOMER LIST
+      - key: SYNC_TARGET_SPREADSHEET_ID
+        value: 1myhJUHFMoml-aAgcs5Y7rKaavgDsHqTyq4yeEAl23nM
+      - key: SYNC_TARGET_SHEET_NAME
+        value: PATIENT MASTER REVIEWED
       - key: MAX_PATIENT_SEARCH_RESULTS
         value: "30"
       - key: RESULT_STORAGE
