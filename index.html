@@ -1,0 +1,1373 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRMed Staff Release Console</title>
+  <style>
+    :root {
+      --navy: #1f3f84;
+      --cyan: #16a6e0;
+      --ink: #19304d;
+      --muted: #657387;
+      --line: #d7e1ef;
+      --bg: #eef5fc;
+      --white: #ffffff;
+      --good: #108f49;
+      --bad: #c42f2f;
+      --warn: #ad7a00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Montserrat", "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(150deg, #e8f4ff 0%, #f8fbff 100%);
+    }
+    .wrap {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 1.4rem;
+    }
+    .hero {
+      background: linear-gradient(130deg, #1f3f84 0%, #16a6e0 100%);
+      color: #fff;
+      border-radius: 16px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 1.28rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+    .hero p {
+      margin: 0.3rem 0 0;
+      font-size: 0.82rem;
+      opacity: 0.95;
+      line-height: 1.6;
+    }
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+    .card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 8px 30px rgba(22, 67, 121, 0.07);
+    }
+    .card h2 {
+      margin: 0 0 0.6rem;
+      font-size: 0.98rem;
+      color: var(--navy);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 0.74rem;
+      line-height: 1.5;
+    }
+    .settings { grid-column: span 12; }
+    .patient-search { grid-column: span 12; }
+    .uploader { grid-column: span 12; }
+    .lookup { grid-column: span 12; }
+    .row {
+      display: grid;
+      gap: 0.6rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 0.68rem;
+    }
+    .row-3 {
+      display: grid;
+      gap: 0.6rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 0.68rem;
+    }
+    label {
+      display: block;
+      font-size: 0.67rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+      font-weight: 700;
+    }
+    input, select, button, textarea {
+      width: 100%;
+      border: 1px solid #c8d8eb;
+      border-radius: 10px;
+      padding: 0.62rem 0.7rem;
+      font-family: inherit;
+      font-size: 0.84rem;
+      color: var(--ink);
+      background: #f8fbff;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid rgba(22, 166, 224, 0.23);
+      border-color: var(--cyan);
+    }
+    button {
+      cursor: pointer;
+      background: linear-gradient(120deg, #1f3f84 0%, #16a6e0 100%);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    button.ghost {
+      background: #fff;
+      border: 1px solid #b9cbe0;
+      color: var(--navy);
+    }
+    .status {
+      margin-top: 0.6rem;
+      padding: 0.55rem 0.7rem;
+      border-radius: 10px;
+      font-size: 0.77rem;
+      line-height: 1.5;
+      border: 1px solid #d0def0;
+      background: #f4f8fd;
+    }
+    .status.good { color: var(--good); border-color: #b8e3c9; background: #ecfbf2; }
+    .status.bad { color: var(--bad); border-color: #f1c0c0; background: #fff1f1; }
+    .status.warn { color: var(--warn); border-color: #f1ddb2; background: #fff9ec; }
+    .status.info { color: #1e40af; border-color: #bfdbfe; background: #eff6ff; }
+    .hint {
+      margin-top: 0.4rem;
+      color: var(--muted);
+      font-size: 0.7rem;
+      line-height: 1.45;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.7rem;
+      font-size: 0.77rem;
+    }
+    th, td {
+      border-bottom: 1px solid #e3ebf5;
+      padding: 0.48rem 0.4rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-size: 0.62rem;
+      background: #f3f7fc;
+    }
+    .pill {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .pill.ok { color: #0d6b37; background: #dff4e7; }
+    .pill.no { color: #9b1f1f; background: #fbe3e3; }
+    .pending-tests {
+      margin-bottom: 0.68rem;
+      padding: 0.62rem 0.7rem;
+      border: 1px solid #d4e2f3;
+      border-radius: 10px;
+      background: #f8fbff;
+    }
+    .pending-tests-grid {
+      display: grid;
+      gap: 0.5rem 0.7rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 0.45rem;
+    }
+    .pending-test-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin: 0;
+      font-size: 0.72rem;
+      letter-spacing: 0.01em;
+      text-transform: none;
+      color: var(--ink);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .pending-test-item input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      accent-color: var(--navy);
+      transform: translateY(-0.02rem);
+    }
+    .pending-tests-note {
+      margin-top: 0.45rem;
+      color: var(--muted);
+      font-size: 0.69rem;
+      line-height: 1.45;
+    }
+    .patient-search-wrap {
+      position: relative;
+    }
+    .patient-search-dropdown {
+      position: absolute;
+      top: calc(100% + 0.3rem);
+      left: 0;
+      right: 0;
+      border: 1px solid #c8d8eb;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 10px 24px rgba(19, 48, 77, 0.16);
+      max-height: 260px;
+      overflow: auto;
+      z-index: 30;
+      display: none;
+    }
+    .patient-search-dropdown.show {
+      display: block;
+    }
+    .patient-search-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 0;
+      border-bottom: 1px solid #eef3fa;
+      background: #fff;
+      color: var(--ink);
+      padding: 0.52rem 0.62rem;
+      cursor: pointer;
+      font-size: 0.76rem;
+      line-height: 1.35;
+    }
+    .patient-search-item:last-child {
+      border-bottom: 0;
+    }
+    .patient-search-item:hover,
+    .patient-search-item:focus {
+      background: #eff6ff;
+      outline: none;
+    }
+    .patient-search-item-title {
+      font-weight: 700;
+      font-size: 0.78rem;
+      color: var(--navy);
+    }
+    .patient-search-item-sub {
+      margin-top: 0.13rem;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+    @media (max-width: 880px) {
+      .pending-tests-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 580px) {
+      .pending-tests-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    }
+    .gate-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(15, 34, 62, 0.54);
+      backdrop-filter: blur(4px);
+    }
+    .gate-overlay.hidden { display: none; }
+    .gate-card {
+      width: min(680px, 96vw);
+      background: #fff;
+      border: 1px solid #d8e4f3;
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: 0 14px 40px rgba(19, 48, 77, 0.2);
+    }
+    .gate-title {
+      margin: 0;
+      color: var(--navy);
+      font-size: 1.04rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+    .gate-sub {
+      margin: 0.35rem 0 0.8rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.6;
+    }
+    .input-readonly {
+      background: #eef4fb;
+      color: #4c607b;
+    }
+    @media (max-width: 920px) {
+      .row, .row-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>DRMed Internal Staff Release Console</h1>
+      <p>Use this internal page for result release. Hidden staff gate is required before any action. Open via local/server URL (not file://).</p>
+    </section>
+
+    <section id="gateOverlay" class="gate-overlay">
+      <article class="gate-card">
+        <h2 class="gate-title">Staff Gate Login</h2>
+        <p class="gate-sub">Enter your staff user and password. This unlocks a short-lived session token for uploads and lookups.</p>
+        <div class="row">
+          <div>
+            <label for="gateApiBase">Backend API Base</label>
+            <input id="gateApiBase" type="text" placeholder="http://localhost:8080" />
+          </div>
+          <div>
+            <label for="gateStaffUser">Staff User</label>
+            <input id="gateStaffUser" type="text" placeholder="frontdesk-1" />
+          </div>
+        </div>
+        <div class="row-3">
+          <div>
+            <label for="gateKey">Password</label>
+            <input id="gateKey" type="password" autocomplete="off" placeholder="Staff password" />
+          </div>
+          <div>
+            <label for="gateMfa">MFA Code (If Enabled)</label>
+            <input id="gateMfa" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
+          </div>
+          <div>
+            <label for="gateTips">Gate Notes</label>
+            <input id="gateTips" class="input-readonly" type="text" value="Use staff user + password only" readonly />
+          </div>
+        </div>
+        <div class="row">
+          <button id="btnUnlockGate" type="button">Unlock Console</button>
+          <button id="btnGateHealth" class="ghost" type="button">Check Backend Health</button>
+        </div>
+        <div id="gateStatus" class="status warn">Console is locked.</div>
+      </article>
+    </section>
+
+    <section class="grid" id="consoleApp">
+      <article class="card settings">
+        <h2>Connection & Auth</h2>
+        <div class="row-3">
+          <div>
+            <label for="apiBase">Backend API Base</label>
+            <input id="apiBase" class="input-readonly" type="text" readonly />
+          </div>
+          <div>
+            <label for="staffUser">Staff User</label>
+            <input id="staffUser" class="input-readonly" type="text" readonly />
+          </div>
+          <div>
+            <label for="staffSessionExpiry">Session Expires</label>
+            <input id="staffSessionExpiry" class="input-readonly" type="text" readonly />
+          </div>
+        </div>
+        <div class="row-3">
+          <button id="btnRenewSession" type="button">Renew Gate Session</button>
+          <button id="btnLockSession" class="ghost" type="button">Lock Console</button>
+          <button id="btnHealthCheck" class="ghost" type="button">Check Backend Health</button>
+        </div>
+        <div class="hint">Filename convention: <strong>CONTROL-TEST.pdf</strong> (example: <strong>2026-0001-CBC.pdf</strong>).</div>
+        <div class="hint">For repeated same tests (e.g. CBC again), include date in filename: <strong>CONTROL-TEST-YYYYMMDD.pdf</strong>.</div>
+        <div class="hint">Also supported: <strong>CONTROL SURNAME, FIRSTNAME TEST.pdf</strong>.</div>
+        <div class="hint">Set one permanent <strong>Patient User ID</strong> per patient so their past results stay under one account.</div>
+        <div id="sessionStatus" class="status">Console locked.</div>
+      </article>
+
+      <article class="card patient-search">
+        <h2>Patient Search (Master Sheet)</h2>
+        <div class="muted">Search patient master, then click Select to auto-fill Patient User ID and Patient Name in uploader.</div>
+        <div class="row-3" style="margin-top:0.6rem;">
+          <div style="grid-column: span 2;">
+            <label for="patientSearchInput">Search (name, patient ID, birthday, contact)</label>
+            <div class="patient-search-wrap" id="patientSearchWrap">
+              <input id="patientSearchInput" type="text" placeholder="Type to search: REYES / DRM-1234 / 1962-09-17" autocomplete="off" />
+              <div id="patientSearchDropdown" class="patient-search-dropdown"></div>
+            </div>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="btnPatientSearch" type="button">Search Patient Master</button>
+          </div>
+        </div>
+        <div id="patientSearchStatus" class="status">Type at least 2 characters to see dropdown suggestions, or click Search Patient Master.</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Patient ID</th>
+              <th>Name</th>
+              <th>Birthday</th>
+              <th>Contact</th>
+              <th>Address</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="patientSearchBody">
+            <tr><td colspan="6" class="muted">No search yet.</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card uploader">
+        <h2>Unified Uploader (Single + Bulk)</h2>
+        <div class="muted">Use one form for everything. If you upload files, system releases them. If you upload no file, system saves as pending.</div>
+        <div class="row-3" style="margin-top:0.6rem;">
+          <div>
+            <label for="uploadPatientId">Patient User ID (recommended)</label>
+            <input id="uploadPatientId" type="text" placeholder="DRM-0001" />
+          </div>
+          <div>
+            <label for="uploadName">Patient Name (optional)</label>
+            <input id="uploadName" type="text" placeholder="Verlyn Devosora" />
+          </div>
+          <div>
+            <label for="uploadPin">Secure PIN (required for new patient/control)</label>
+            <input id="uploadPin" type="text" placeholder="A1B2C3" />
+          </div>
+        </div>
+        <div class="row-3">
+          <div>
+            <label for="uploadControl">Control Number (for no-file single or filename fallback)</label>
+            <input id="uploadControl" type="text" placeholder="2026-0001" />
+          </div>
+          <div>
+            <label for="uploadTest">Test Name (for no-file single or filename fallback)</label>
+            <input id="uploadTest" type="text" placeholder="CBC" />
+          </div>
+          <div>
+            <label for="uploadDate">Test Date (recommended)</label>
+            <input id="uploadDate" type="date" />
+          </div>
+        </div>
+        <div class="pending-tests">
+          <label>Pending Tests (No-file bulk option)</label>
+          <div class="pending-tests-grid">
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="CHEM" /> CHEMISTRY (CHEM)</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="CBC" /> COMPLETE BLOOD COUNT (CBC)</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="BT" /> BLOOD TYPE (BT)</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="SERO" /> SEROLOGY (SERO)</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="UA" /> URINALYSIS (UA)</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="PSA" /> PSA</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="CT/BT" /> CT/BT</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="OGTT" /> OGTT</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="2HR PPBS" /> 2HR PPBS</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="FA" /> FECALYSIS (FA)</label>
+            <label class="pending-test-item"><input class="pending-test-checkbox" type="checkbox" value="PT" /> PREGNANCY TEST (PT)</label>
+          </div>
+          <div class="pending-tests-note">If at least one test is checked and no PDF is selected, submit will create one Pending row per checked test.</div>
+        </div>
+        <div>
+          <label for="uploadFiles">PDF Files (optional, single or multiple)</label>
+          <input id="uploadFiles" type="file" accept="application/pdf" multiple />
+        </div>
+        <div class="hint">Filename format for auto-parse: <strong>CONTROL-TEST.pdf</strong>, <strong>CONTROL-TEST-YYYYMMDD.pdf</strong>, or <strong>CONTROL SURNAME, FIRSTNAME TEST.pdf</strong>.</div>
+        <div class="hint">No file uploaded = saved as <strong>Pending</strong>. With file upload = saved as <strong>Released</strong>.</div>
+        <div class="row">
+          <div id="uploadModeBox" class="status info">Mode: Pending update (no file selected).</div>
+          <div id="uploadSyncBox" class="status">Google Sheet sync: waiting.</div>
+        </div>
+        <div class="row-3" style="margin-top:0.7rem;">
+          <button id="btnUploadPreview" class="ghost" type="button">Preview Files</button>
+          <button id="btnUploadSubmit" type="button">Submit (Auto Single/Bulk)</button>
+          <button id="btnUploadClear" class="ghost" type="button">Clear Form</button>
+        </div>
+        <div id="uploadStatusBox" class="status">Ready.</div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>File</th>
+              <th>Control</th>
+              <th>Test</th>
+              <th>Date</th>
+              <th>Sheet Row</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="uploadPreviewBody">
+            <tr><td colspan="7" class="muted">No files selected.</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card lookup">
+        <h2>Report Lookup</h2>
+        <div class="row">
+          <div>
+            <label for="lookupControl">Control Number</label>
+            <input id="lookupControl" type="text" placeholder="2026-0001" />
+          </div>
+          <div>
+            <label for="lookupPatientId">Patient User ID (optional)</label>
+            <input id="lookupPatientId" type="text" placeholder="DRM-0001" />
+          </div>
+        </div>
+        <div class="row-3">
+          <button id="btnLookup" type="button">Refresh Reports</button>
+          <button id="btnUseUploadControl" class="ghost" type="button">Use Upload Control #</button>
+          <button id="btnUseUploadPatientId" class="ghost" type="button">Use Upload Patient ID</button>
+        </div>
+        <div id="lookupStatusBox" class="status">Enter control number or patient ID, then click Refresh Reports.</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Row</th>
+              <th>Patient ID</th>
+              <th>Control #</th>
+              <th>Test</th>
+              <th>Status</th>
+              <th>Released At</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="lookupBody">
+            <tr><td colspan="7" class="muted">No data loaded.</td></tr>
+          </tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const SESSION_KEY = 'drmedStaffConsoleSessionV2';
+    const session = {
+      apiBase: '',
+      staffUser: '',
+      staffSessionToken: '',
+      staffSessionExpiry: ''
+    };
+    const patientSearchState = {
+      debounceTimer: null,
+      requestSeq: 0
+    };
+
+    function defaultApiBase() {
+      const host = window.location.hostname || '';
+      if (window.location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1') return 'http://localhost:8080';
+      if (host === 'drmed.visionsbyiso.com') return 'https://api.drmed.visionsbyiso.com';
+      if (host === 'drmed.ph' || host === 'www.drmed.ph') return 'https://api.drmed.ph';
+      if (!host.startsWith('api.') && host.includes('.')) return 'https://api.' + host;
+      return window.location.origin;
+    }
+
+    function text(value, fallback) {
+      const out = String(value || '').trim();
+      return out || String(fallback || '');
+    }
+
+    function setStatus(id, message, tone) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = 'status';
+      if (tone) el.classList.add(tone);
+      el.textContent = text(message, '');
+    }
+
+    function normalizeDateToken(raw) {
+      const input = text(raw, '').replace(/[_./]/g, '-');
+      if (!input) return '';
+      const compact = input.match(/^(\d{4})(\d{2})(\d{2})$/);
+      if (compact) return compact[1] + '-' + compact[2] + '-' + compact[3];
+      const ymd = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (ymd) return ymd[1] + '-' + ymd[2] + '-' + ymd[3];
+      return '';
+    }
+
+    function parseStaffFilename(fileName) {
+      const stem = text(fileName, '').replace(/\.pdf$/i, '');
+      const withDate = stem.match(/^([A-Za-z0-9]+(?:-\d+)?)(?:[-_ ]+(.+?))[-_ ]+((?:19|20)\d{2}[-_]?\d{2}[-_]?\d{2})$/);
+      if (withDate) {
+        return {
+          controlNumber: text(withDate[1]).toUpperCase(),
+          testName: text(withDate[2]).replace(/[_-]+/g, ' ').toUpperCase(),
+          testDate: normalizeDateToken(withDate[3])
+        };
+      }
+      const controlWithCommaName = stem.match(/^([A-Za-z0-9]+(?:-\d+)?)[-_ ]+[^,]+,\s*(.+)$/);
+      if (controlWithCommaName) {
+        const control = text(controlWithCommaName[1]).toUpperCase();
+        const tail = text(controlWithCommaName[2]).replace(/[_-]+/g, ' ');
+        const parts = tail.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+          return { controlNumber: control, testName: text(parts[parts.length - 1]).toUpperCase(), testDate: '' };
+        }
+        return { controlNumber: control, testName: '', testDate: '' };
+      }
+      const controlFirst = stem.match(/^([A-Za-z0-9]+(?:-\d+)?)(?:[-_ ]+(.+))?$/);
+      if (controlFirst) {
+        return {
+          controlNumber: text(controlFirst[1]).toUpperCase(),
+          testName: text(controlFirst[2]).replace(/[_-]+/g, ' ').toUpperCase(),
+          testDate: ''
+        };
+      }
+      const parts = stem.split(/[_ ]+/).filter(Boolean);
+      if (parts.length >= 2) {
+        return {
+          controlNumber: text(parts[0]).toUpperCase(),
+          testName: parts.slice(1).join(' ').replace(/[_-]+/g, ' ').toUpperCase(),
+          testDate: ''
+        };
+      }
+      return { controlNumber: '', testName: '', testDate: '' };
+    }
+
+    function isSessionTokenValid() {
+      if (!session.staffSessionToken) return false;
+      if (!session.staffSessionExpiry) return true;
+      const expiryTs = Date.parse(session.staffSessionExpiry);
+      if (Number.isNaN(expiryTs)) return true;
+      return expiryTs > Date.now();
+    }
+
+    function saveSession() {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    }
+
+    function loadSession() {
+      const fallback = {
+        apiBase: defaultApiBase(),
+        staffUser: '',
+        staffSessionToken: '',
+        staffSessionExpiry: ''
+      };
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (!raw) {
+          Object.assign(session, fallback);
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        Object.assign(session, fallback, parsed || {});
+      } catch (_err) {
+        Object.assign(session, fallback);
+      }
+    }
+
+    function clearSession() {
+      Object.assign(session, {
+        apiBase: defaultApiBase(),
+        staffUser: '',
+        staffSessionToken: '',
+        staffSessionExpiry: ''
+      });
+      saveSession();
+      syncSessionToUi();
+    }
+
+    function syncSessionToUi() {
+      document.getElementById('apiBase').value = text(session.apiBase, defaultApiBase());
+      document.getElementById('staffUser').value = text(session.staffUser, '');
+      document.getElementById('staffSessionExpiry').value = text(session.staffSessionExpiry, 'N/A');
+
+      document.getElementById('gateApiBase').value = text(session.apiBase, defaultApiBase());
+      document.getElementById('gateStaffUser').value = text(session.staffUser, '');
+    }
+
+    function setLocked(locked, message, tone) {
+      const overlay = document.getElementById('gateOverlay');
+      if (!overlay) return;
+      overlay.classList.toggle('hidden', !locked);
+      if (message) setStatus('sessionStatus', message, tone || 'warn');
+    }
+
+    function buildAuthContext() {
+      if (!session.apiBase) throw new Error('Missing API base URL.');
+      const headers = {};
+      if (session.staffUser) headers['X-Staff-User'] = session.staffUser;
+
+      if (isSessionTokenValid()) {
+        headers['X-Staff-Session'] = session.staffSessionToken;
+      } else if (session.staffSessionToken) {
+        session.staffSessionToken = '';
+        session.staffSessionExpiry = '';
+        saveSession();
+        syncSessionToUi();
+      }
+
+      if (!headers['X-Staff-Session']) {
+        throw new Error('Console is locked or session expired. Please login again.');
+      }
+
+      return {
+        apiBase: text(session.apiBase, defaultApiBase()).replace(/\/$/, ''),
+        headers
+      };
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function() { resolve(String(reader.result || '')); };
+        reader.onerror = function() { reject(new Error('Failed to read file: ' + file.name)); };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function doHealthCheck(targetStatusId, explicitBase) {
+      const statusId = targetStatusId || 'sessionStatus';
+      try {
+        const base = text(explicitBase, session.apiBase || defaultApiBase()).replace(/\/$/, '');
+        const res = await fetch(base + '/healthz');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error('Health check failed.');
+        setStatus(statusId, 'Backend OK: ' + text(data.time, ''), 'good');
+      } catch (err) {
+        setStatus(statusId, text(err.message, 'Health check failed.'), 'bad');
+      }
+    }
+
+    async function unlockConsole() {
+      const apiBase = text(document.getElementById('gateApiBase').value, defaultApiBase()).replace(/\/$/, '');
+      const staffUser = text(document.getElementById('gateStaffUser').value, '');
+      const password = text(document.getElementById('gateKey').value, '');
+      const mfa = text(document.getElementById('gateMfa').value, '');
+
+      if (!apiBase || !staffUser) {
+        setStatus('gateStatus', 'Backend URL and staff user are required.', 'bad');
+        return;
+      }
+
+      session.apiBase = apiBase;
+      session.staffUser = staffUser;
+      session.staffSessionToken = '';
+      session.staffSessionExpiry = '';
+
+      if (!password) {
+        setStatus('gateStatus', 'Password is required.', 'bad');
+        return;
+      }
+
+      try {
+        const payload = { staffUser, password };
+        if (mfa) payload.mfa = mfa;
+        const res = await fetch(apiBase + '/api/staff/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const raw = await res.text();
+        let data = {};
+        try { data = JSON.parse(raw); } catch (_err) { data = {}; }
+        if (!res.ok) {
+          const fallback = 'Gate login failed (' + res.status + ').';
+          const tail = raw && !data.message ? ' ' + String(raw).slice(0, 140) : '';
+          throw new Error(text(data.message, fallback + tail));
+        }
+
+        session.staffSessionToken = text(data.staffSessionToken, '');
+        session.staffSessionExpiry = text(data.expiresAt, '');
+        saveSession();
+        syncSessionToUi();
+        setStatus('gateStatus', 'Gate unlocked. Session active until ' + text(session.staffSessionExpiry, 'expiry unknown') + '.', 'good');
+        setLocked(false, 'Console unlocked.', 'good');
+        document.getElementById('gateKey').value = '';
+        document.getElementById('gateMfa').value = '';
+      } catch (err) {
+        setStatus('gateStatus', text(err.message, 'Gate login failed.'), 'bad');
+      }
+    }
+
+    function lockConsole() {
+      session.staffSessionToken = '';
+      session.staffSessionExpiry = '';
+      saveSession();
+      syncSessionToUi();
+      setLocked(true, 'Console locked.', 'warn');
+      setStatus('gateStatus', 'Console is locked.', 'warn');
+    }
+
+    function clearUploadForm() {
+      document.getElementById('uploadControl').value = '';
+      document.getElementById('uploadTest').value = '';
+      document.getElementById('uploadDate').value = '';
+      document.getElementById('uploadPatientId').value = '';
+      document.getElementById('uploadName').value = '';
+      document.getElementById('uploadPin').value = '';
+      document.getElementById('uploadFiles').value = '';
+      clearPendingSelections();
+      const body = document.getElementById('uploadPreviewBody');
+      body.innerHTML = '<tr><td colspan="7" class="muted">No files selected.</td></tr>';
+      setUploadSync('waiting.', '');
+      updateUploadModeUi();
+      setStatus('uploadStatusBox', 'Form cleared.', 'warn');
+    }
+
+    function fillUploadFromRow(row) {
+      if (!row) return;
+      document.getElementById('uploadControl').value = text(row.controlNumber, '');
+      document.getElementById('uploadTest').value = text(row.testName, '');
+      document.getElementById('uploadDate').value = normalizeDateToken(row.date || '');
+      document.getElementById('uploadPatientId').value = text(row.patientId, '');
+      syncPendingSelectionFromTestName(row.testName);
+      updateUploadModeUi();
+      setStatus('uploadStatusBox', 'Uploader form loaded from selected row.', 'good');
+    }
+
+    function getUploadDefaults() {
+      return {
+        controlNumber: text(document.getElementById('uploadControl').value, '').toUpperCase(),
+        testName: text(document.getElementById('uploadTest').value, ''),
+        testDate: text(document.getElementById('uploadDate').value, ''),
+        patientId: text(document.getElementById('uploadPatientId').value, '').toUpperCase(),
+        patientName: text(document.getElementById('uploadName').value, ''),
+        securePin: text(document.getElementById('uploadPin').value, '')
+      };
+    }
+
+    function normalizeTestName(testName) {
+      return text(testName, '').replace(/\s+/g, ' ').toUpperCase();
+    }
+
+    function getSelectedPendingTests() {
+      return Array.from(document.querySelectorAll('.pending-test-checkbox:checked'))
+        .map(function(cb) { return normalizeTestName(cb.value); })
+        .filter(Boolean);
+    }
+
+    function getPendingTestsForNoFile(fallbackTestName) {
+      const selected = getSelectedPendingTests();
+      if (selected.length) return Array.from(new Set(selected));
+      const fallback = normalizeTestName(fallbackTestName);
+      return fallback ? [fallback] : [];
+    }
+
+    function clearPendingSelections() {
+      const checkboxes = document.querySelectorAll('.pending-test-checkbox');
+      checkboxes.forEach(function(cb) { cb.checked = false; });
+    }
+
+    function syncPendingSelectionFromTestName(testName) {
+      const normalized = normalizeTestName(testName);
+      if (!normalized) {
+        clearPendingSelections();
+        return;
+      }
+      const checkboxes = Array.from(document.querySelectorAll('.pending-test-checkbox'));
+      let matched = false;
+      checkboxes.forEach(function(cb) {
+        const isMatch = normalizeTestName(cb.value) === normalized;
+        cb.checked = isMatch;
+        if (isMatch) matched = true;
+      });
+      if (!matched) clearPendingSelections();
+    }
+
+    function setUploadSync(message, tone) {
+      setStatus('uploadSyncBox', 'Google Sheet sync: ' + text(message, ''), tone || '');
+    }
+
+    function updateUploadModeUi() {
+      const files = Array.from(document.getElementById('uploadFiles').files || []);
+      const btn = document.getElementById('btnUploadSubmit');
+      if (!btn) return;
+      if (!files.length) {
+        const defaults = getUploadDefaults();
+        const pendingTests = getPendingTestsForNoFile(defaults.testName);
+        const pendingCount = pendingTests.length;
+        btn.textContent = pendingCount > 1
+          ? ('Save ' + pendingCount + ' Pending Tests to Google Sheet')
+          : 'Save Pending to Google Sheet';
+        setStatus(
+          'uploadModeBox',
+          'Mode: Pending update (no file selected' + (pendingCount ? ', ' + pendingCount + ' test(s)' : '') + ').',
+          'info'
+        );
+        return;
+      }
+      if (files.length === 1) {
+        btn.textContent = 'Upload 1 PDF & Release';
+        setStatus('uploadModeBox', 'Mode: Single release upload.', 'info');
+        return;
+      }
+      btn.textContent = 'Upload ' + files.length + ' PDFs & Release';
+      setStatus('uploadModeBox', 'Mode: Bulk release upload (' + files.length + ' files).', 'info');
+    }
+
+    function renderUploadPreviewRows(rows) {
+      const body = document.getElementById('uploadPreviewBody');
+      body.innerHTML = '';
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="7" class="muted">No files selected.</td></tr>';
+        return;
+      }
+      rows.forEach(function(row, idx) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + String(idx + 1) + '</td>' +
+          '<td>' + text(row.fileName, '-') + '</td>' +
+          '<td>' + text(row.controlNumber, '-') + '</td>' +
+          '<td>' + text(row.testName, '-') + '</td>' +
+          '<td>' + text(row.testDate, '-') + '</td>' +
+          '<td>' + text(row.sheetRow, '-') + '</td>' +
+          '<td>' + text(row.result, '-') + '</td>';
+        body.appendChild(tr);
+      });
+    }
+
+    function previewUploadFiles() {
+      const files = Array.from(document.getElementById('uploadFiles').files || []);
+      const defaults = getUploadDefaults();
+      updateUploadModeUi();
+      if (!files.length) {
+        const pendingTests = getPendingTestsForNoFile(defaults.testName);
+        if (!defaults.controlNumber || !pendingTests.length) {
+          renderUploadPreviewRows([]);
+          setStatus('uploadStatusBox', 'No file selected. Enter Control Number and choose at least one test.', 'warn');
+          return;
+        }
+        const previewRows = pendingTests.map(function(testName) {
+          return {
+            fileName: '(no file)',
+            controlNumber: defaults.controlNumber,
+            testName,
+            testDate: defaults.testDate || '-',
+            sheetRow: '-',
+            result: 'Pending'
+          };
+        });
+        renderUploadPreviewRows(previewRows);
+        setStatus('uploadStatusBox', 'No file selected. Ready to save ' + previewRows.length + ' pending row(s).', 'warn');
+        return;
+      }
+      const previewRows = files.map(function(file) {
+        const parsed = parseStaffFilename(file.name);
+        return {
+          fileName: file.name,
+          controlNumber: parsed.controlNumber || defaults.controlNumber || '',
+          testName: parsed.testName || defaults.testName || '',
+          testDate: parsed.testDate || defaults.testDate || '',
+          sheetRow: '-',
+          result: 'Ready'
+        };
+      });
+      renderUploadPreviewRows(previewRows);
+      setStatus('uploadStatusBox', files.length + ' file(s) ready.', 'warn');
+    }
+
+    function selectPatientFromSearch(row) {
+      if (!row) return;
+      const patientId = text(row.patientId, '').toUpperCase();
+      if (patientId) document.getElementById('uploadPatientId').value = patientId;
+      if (text(row.patientName, '')) document.getElementById('uploadName').value = text(row.patientName, '');
+      document.getElementById('lookupPatientId').value = patientId;
+      updateUploadModeUi();
+      const generatedTag = row.generatedPatientId ? ' (generated ID)' : '';
+      setStatus('patientSearchStatus', 'Selected ' + text(row.patientName, 'patient') + ' [' + patientId + ']' + generatedTag + '.', 'good');
+      setStatus('uploadStatusBox', 'Uploader filled from Patient Search.', 'good');
+      hidePatientSearchDropdown();
+    }
+
+    function hidePatientSearchDropdown() {
+      const dropdown = document.getElementById('patientSearchDropdown');
+      if (!dropdown) return;
+      dropdown.classList.remove('show');
+      dropdown.innerHTML = '';
+    }
+
+    function renderPatientSearchDropdown(rows) {
+      const dropdown = document.getElementById('patientSearchDropdown');
+      if (!dropdown) return;
+      dropdown.innerHTML = '';
+      if (!rows.length) {
+        const empty = document.createElement('div');
+        empty.className = 'patient-search-item-sub';
+        empty.style.padding = '0.55rem 0.62rem';
+        empty.textContent = 'No matching patients.';
+        dropdown.appendChild(empty);
+        dropdown.classList.add('show');
+        return;
+      }
+      rows.forEach(function(row) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'patient-search-item';
+        const title = document.createElement('div');
+        title.className = 'patient-search-item-title';
+        title.textContent = text(row.patientName, '-') + ' [' + text(row.patientId, '-') + ']';
+        const sub = document.createElement('div');
+        sub.className = 'patient-search-item-sub';
+        sub.textContent = 'Bday: ' + text(row.birthday, '-') + ' | Contact: ' + text(row.contactNumber, '-');
+        btn.appendChild(title);
+        btn.appendChild(sub);
+        btn.addEventListener('click', function() { selectPatientFromSearch(row); });
+        dropdown.appendChild(btn);
+      });
+      dropdown.classList.add('show');
+    }
+
+    function renderPatientSearchRows(rows) {
+      const body = document.getElementById('patientSearchBody');
+      body.innerHTML = '';
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="6" class="muted">No matching patients found.</td></tr>';
+        return;
+      }
+      rows.forEach(function(row, idx) {
+        const tr = document.createElement('tr');
+        const btnId = 'select-patient-' + String(idx) + '-' + String(Math.random()).slice(2, 8);
+        tr.innerHTML =
+          '<td>' + text(row.patientId, '-') + '</td>' +
+          '<td>' + text(row.patientName, '-') + '</td>' +
+          '<td>' + text(row.birthday, '-') + '</td>' +
+          '<td>' + text(row.contactNumber, '-') + '</td>' +
+          '<td>' + text(row.address, '-') + '</td>' +
+          '<td><button class="ghost" id="' + btnId + '" type="button" style="width:auto;padding:0.35rem 0.55rem;font-size:0.68rem;">Select</button></td>';
+        body.appendChild(tr);
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.addEventListener('click', function() { selectPatientFromSearch(row); });
+        }
+      });
+    }
+
+    async function fetchPatientSearch(query, limit) {
+      const { apiBase, headers } = buildAuthContext();
+      const url = apiBase + '/api/staff/patients/search?q=' + encodeURIComponent(query) + '&limit=' + String(limit || 30);
+      const res = await fetch(url, { method: 'GET', headers });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 404) {
+        throw new Error('Patient search API is not available yet. Please restart or redeploy backend.');
+      }
+      if (!res.ok) throw new Error(text(data.message, 'Patient search failed.'));
+      return {
+        rows: Array.isArray(data.patients) ? data.patients : [],
+        sheetName: text(data.sheetName, 'master sheet')
+      };
+    }
+
+    function queueLivePatientSearch() {
+      if (patientSearchState.debounceTimer) {
+        clearTimeout(patientSearchState.debounceTimer);
+      }
+      patientSearchState.debounceTimer = setTimeout(runLivePatientSearch, 250);
+    }
+
+    async function runLivePatientSearch() {
+      const query = text(document.getElementById('patientSearchInput').value, '');
+      if (query.length < 2) {
+        hidePatientSearchDropdown();
+        setStatus('patientSearchStatus', 'Type at least 2 characters to search patient master.', 'warn');
+        return;
+      }
+      const reqId = patientSearchState.requestSeq + 1;
+      patientSearchState.requestSeq = reqId;
+      try {
+        const data = await fetchPatientSearch(query, 12);
+        if (reqId !== patientSearchState.requestSeq) return;
+        renderPatientSearchDropdown(data.rows);
+        setStatus('patientSearchStatus', 'Live results: ' + data.rows.length + ' patient(s) from ' + data.sheetName + '.', data.rows.length ? 'good' : 'warn');
+      } catch (err) {
+        if (reqId !== patientSearchState.requestSeq) return;
+        hidePatientSearchDropdown();
+        setStatus('patientSearchStatus', text(err.message, 'Patient search failed.'), 'bad');
+      }
+    }
+
+    async function searchPatientMaster() {
+      const query = text(document.getElementById('patientSearchInput').value, '');
+      if (query.length < 2) {
+        setStatus('patientSearchStatus', 'Search query must be at least 2 characters.', 'warn');
+        hidePatientSearchDropdown();
+        renderPatientSearchRows([]);
+        return;
+      }
+      try {
+        const data = await fetchPatientSearch(query, 30);
+        renderPatientSearchRows(data.rows);
+        renderPatientSearchDropdown(data.rows.slice(0, 12));
+        setStatus('patientSearchStatus', 'Found ' + data.rows.length + ' patient(s) from ' + data.sheetName + '.', data.rows.length ? 'good' : 'warn');
+      } catch (err) {
+        hidePatientSearchDropdown();
+        renderPatientSearchRows([]);
+        setStatus('patientSearchStatus', text(err.message, 'Patient search failed.'), 'bad');
+      }
+    }
+
+    async function lookupControl(controlNumber, patientIdInput) {
+      const control = text(controlNumber, '').toUpperCase();
+      const patientId = text(patientIdInput, '').toUpperCase();
+      if (!control && !patientId) {
+        setStatus('lookupStatusBox', 'Control number or patient ID is required.', 'bad');
+        return;
+      }
+      try {
+        const { apiBase, headers } = buildAuthContext();
+        let url = apiBase + '/api/staff/reports';
+        const query = [];
+        if (control) query.push('control=' + encodeURIComponent(control));
+        if (patientId) query.push('patientId=' + encodeURIComponent(patientId));
+        if (query.length) url += '?' + query.join('&');
+
+        const res = await fetch(url, {
+          method: 'GET',
+          headers
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(text(data.message, 'Lookup failed.'));
+
+        const body = document.getElementById('lookupBody');
+        body.innerHTML = '';
+        const rows = Array.isArray(data.reports) ? data.reports : [];
+        if (!rows.length) {
+          body.innerHTML = '<tr><td colspan="7" class="muted">No reports found.</td></tr>';
+        } else {
+          rows.forEach((row) => {
+            const tr = document.createElement('tr');
+            const statusClass = String(row.status || '').toLowerCase() === 'released' ? 'ok' : 'no';
+            const btnId = 'use-row-' + String(row.rowNumber || Math.random()).replace(/[^a-zA-Z0-9_-]/g, '');
+            tr.innerHTML =
+              '<td>' + text(row.rowNumber, '-') + '</td>' +
+              '<td>' + text(row.patientId, '-') + '</td>' +
+              '<td>' + text(row.controlNumber, '-') + '</td>' +
+              '<td>' + text(row.testName, '-') + '</td>' +
+              '<td><span class="pill ' + statusClass + '">' + text(row.status, '-') + '</span></td>' +
+              '<td>' + text(row.releasedAt, 'N/A') + '</td>' +
+              '<td><button class="ghost" id="' + btnId + '" type="button" style="width:auto;padding:0.35rem 0.55rem;font-size:0.68rem;">Use</button></td>';
+            body.appendChild(tr);
+            const useBtn = document.getElementById(btnId);
+            if (useBtn) {
+              useBtn.addEventListener('click', function() { fillUploadFromRow(row); });
+            }
+          });
+        }
+        const label = patientId
+          ? ('patient ' + text(data.patientId, patientId))
+          : ('control ' + text(data.controlNumber, control));
+        setStatus('lookupStatusBox', 'Loaded ' + rows.length + ' row(s) for ' + label + '.', 'good');
+      } catch (err) {
+        setStatus('lookupStatusBox', text(err.message, 'Lookup failed.'), 'bad');
+      }
+    }
+
+    async function submitUnifiedUpload() {
+      try {
+        const { apiBase, headers } = buildAuthContext();
+        const defaults = getUploadDefaults();
+        const files = Array.from(document.getElementById('uploadFiles').files || []);
+        setUploadSync('syncing...', 'warn');
+
+        if (!files.length) {
+          const pendingTests = getPendingTestsForNoFile(defaults.testName);
+          if (!defaults.controlNumber || !pendingTests.length) {
+            throw new Error('For no-file submission, Control Number and at least one Test Name are required.');
+          }
+          setStatus('uploadStatusBox', 'Saving ' + pendingTests.length + ' pending row(s)...', 'warn');
+          const rows = [];
+          let successCount = 0;
+          let firstSuccess = null;
+
+          for (let i = 0; i < pendingTests.length; i += 1) {
+            const testName = pendingTests[i];
+            const payload = {
+              controlNumber: defaults.controlNumber,
+              testName,
+              testDate: defaults.testDate,
+              patientId: defaults.patientId,
+              patientName: defaults.patientName,
+              securePin: defaults.securePin,
+              status: 'Pending'
+            };
+
+            const res = await fetch(apiBase + '/api/staff/reports', {
+              method: 'POST',
+              headers: { ...headers, 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+              successCount += 1;
+              if (!firstSuccess) firstSuccess = data;
+              rows.push({
+                fileName: '(no file)',
+                controlNumber: text(data.controlNumber, defaults.controlNumber),
+                testName: text(data.testName, testName),
+                testDate: defaults.testDate || '-',
+                sheetRow: text(data.rowNumber, '-'),
+                result: text(data.reportStatus, 'Pending')
+              });
+            } else {
+              rows.push({
+                fileName: '(no file)',
+                controlNumber: defaults.controlNumber,
+                testName,
+                testDate: defaults.testDate || '-',
+                sheetRow: '-',
+                result: 'Failed: ' + text(data.message, 'Submit failed.')
+              });
+            }
+          }
+
+          const errorCount = pendingTests.length - successCount;
+          renderUploadPreviewRows(rows);
+          setStatus(
+            'uploadStatusBox',
+            'Pending save complete. Success: ' + successCount + ', Errors: ' + errorCount + '.',
+            errorCount ? 'warn' : 'good'
+          );
+          setUploadSync(
+            successCount
+              ? ('synced ' + successCount + ' pending row(s) at ' + new Date().toLocaleString())
+              : 'failed. no rows were saved.',
+            errorCount ? (successCount ? 'warn' : 'bad') : 'good'
+          );
+          if (firstSuccess) {
+            document.getElementById('lookupControl').value = text(firstSuccess.controlNumber, defaults.controlNumber);
+            document.getElementById('lookupPatientId').value = defaults.patientId || text(firstSuccess.patientId, '');
+            lookupControl(document.getElementById('lookupControl').value, document.getElementById('lookupPatientId').value);
+          }
+          return;
+        }
+
+        setStatus('uploadStatusBox', 'Reading ' + files.length + ' file(s)...', 'warn');
+        const items = [];
+        for (let i = 0; i < files.length; i += 1) {
+          const file = files[i];
+          const parsed = parseStaffFilename(file.name);
+          const controlNumber = text(parsed.controlNumber, defaults.controlNumber).toUpperCase();
+          const testName = text(parsed.testName, defaults.testName);
+          const testDate = text(parsed.testDate, defaults.testDate);
+          if (!controlNumber || !testName) {
+            throw new Error('Missing control/test in file "' + file.name + '". Use supported filename format or fill fallback fields.');
+          }
+          items.push({
+            originalFileName: file.name,
+            controlNumber,
+            testName,
+            testDate,
+            patientId: defaults.patientId,
+            patientName: defaults.patientName,
+            securePin: defaults.securePin,
+            status: 'Released',
+            pdfBase64: await readFileAsDataUrl(file)
+          });
+        }
+
+        const res = await fetch(apiBase + '/api/staff/reports/bulk', {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ defaults: { ...defaults, status: 'Released' }, items })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok && res.status !== 207) throw new Error(text(data.message, 'Upload failed.'));
+
+        const results = Array.isArray(data.results) ? data.results : [];
+        const previewRows = results.map(function(row) {
+          return {
+            fileName: text(row.file && row.file.name, row.fileName || ''),
+            controlNumber: text(row.controlNumber, ''),
+            testName: text(row.testName, ''),
+            testDate: '-',
+            sheetRow: text(row.rowNumber, '-'),
+            result: row.ok ? 'Saved' : text(row.error, 'Failed')
+          };
+        });
+        renderUploadPreviewRows(previewRows);
+        setStatus(
+          'uploadStatusBox',
+          'Done. Success: ' + text(data.successCount, 0) + ', Errors: ' + text(data.errorCount, 0) + '.',
+          data.errorCount ? 'warn' : 'good'
+        );
+        setUploadSync(
+          'synced ' + text(data.successCount, 0) + ' row(s) at ' + new Date().toLocaleString(),
+          data.errorCount ? 'warn' : 'good'
+        );
+
+        const firstOk = results.find(function(row) { return !!row.ok; }) || null;
+        if (firstOk) {
+          document.getElementById('lookupControl').value = text(firstOk.controlNumber, '');
+          document.getElementById('lookupPatientId').value = defaults.patientId;
+          lookupControl(document.getElementById('lookupControl').value, document.getElementById('lookupPatientId').value);
+        }
+      } catch (err) {
+        setStatus('uploadStatusBox', text(err.message, 'Upload failed.'), 'bad');
+        setUploadSync('failed. ' + text(err.message, ''), 'bad');
+      }
+    }
+
+    function bindEvents() {
+      document.getElementById('btnUnlockGate').addEventListener('click', unlockConsole);
+      document.getElementById('btnGateHealth').addEventListener('click', function() {
+        doHealthCheck('gateStatus', document.getElementById('gateApiBase').value);
+      });
+      document.getElementById('btnRenewSession').addEventListener('click', function() {
+        setLocked(true, 'Renew session to continue.', 'warn');
+        setStatus('gateStatus', 'Re-enter staff password to renew session.', 'warn');
+      });
+      document.getElementById('btnLockSession').addEventListener('click', lockConsole);
+      document.getElementById('btnHealthCheck').addEventListener('click', function() { doHealthCheck('sessionStatus'); });
+      document.getElementById('btnPatientSearch').addEventListener('click', searchPatientMaster);
+      document.getElementById('patientSearchInput').addEventListener('input', function() {
+        queueLivePatientSearch();
+      });
+      document.getElementById('patientSearchInput').addEventListener('focus', function() {
+        const q = text(document.getElementById('patientSearchInput').value, '');
+        if (q.length >= 2) queueLivePatientSearch();
+      });
+      document.getElementById('patientSearchInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          searchPatientMaster();
+        } else if (e.key === 'Escape') {
+          hidePatientSearchDropdown();
+        }
+      });
+      document.addEventListener('click', function(e) {
+        const wrap = document.getElementById('patientSearchWrap');
+        if (!wrap) return;
+        if (!wrap.contains(e.target)) hidePatientSearchDropdown();
+      });
+      document.getElementById('btnUploadPreview').addEventListener('click', previewUploadFiles);
+      document.getElementById('btnUploadSubmit').addEventListener('click', submitUnifiedUpload);
+      document.getElementById('btnUploadClear').addEventListener('click', clearUploadForm);
+      document.getElementById('uploadFiles').addEventListener('change', previewUploadFiles);
+      document.getElementById('uploadControl').addEventListener('input', function(e) { e.target.value = text(e.target.value, '').toUpperCase(); });
+      document.getElementById('uploadControl').addEventListener('input', function() { updateUploadModeUi(); });
+      document.getElementById('uploadTest').addEventListener('input', function() { updateUploadModeUi(); });
+      document.getElementById('uploadPatientId').addEventListener('input', function(e) { e.target.value = text(e.target.value, '').toUpperCase(); });
+      document.querySelectorAll('.pending-test-checkbox').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          updateUploadModeUi();
+          const files = Array.from(document.getElementById('uploadFiles').files || []);
+          if (!files.length) previewUploadFiles();
+        });
+      });
+      document.getElementById('lookupControl').addEventListener('input', function(e) { e.target.value = text(e.target.value, '').toUpperCase(); });
+      document.getElementById('lookupPatientId').addEventListener('input', function(e) { e.target.value = text(e.target.value, '').toUpperCase(); });
+      document.getElementById('btnLookup').addEventListener('click', function() {
+        lookupControl(
+          document.getElementById('lookupControl').value,
+          document.getElementById('lookupPatientId').value
+        );
+      });
+      document.getElementById('btnUseUploadControl').addEventListener('click', function() {
+        const control = text(document.getElementById('uploadControl').value, '');
+        document.getElementById('lookupControl').value = control;
+      });
+      document.getElementById('btnUseUploadPatientId').addEventListener('click', function() {
+        const patientId = text(document.getElementById('uploadPatientId').value, '');
+        document.getElementById('lookupPatientId').value = patientId;
+      });
+    }
+
+    loadSession();
+    syncSessionToUi();
+    bindEvents();
+    updateUploadModeUi();
+    setUploadSync('waiting.', '');
+
+    if (isSessionTokenValid()) {
+      setLocked(false, 'Console unlocked from active session.', 'good');
+    } else {
+      setLocked(true, 'Console locked.', 'warn');
+    }
+  </script>
+</body>
+</html>
