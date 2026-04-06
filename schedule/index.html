@@ -1,0 +1,2292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRMed Clinic Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F2ED;
+    --surface: #FDFBF8;
+    --surface-2: #EDE9E2;
+    --border: #D8D2C8;
+    --text: #1A1714;
+    --text-2: #5C5650;
+    --text-3: #9C948A;
+    --accent: #1A6B4A;
+    --accent-light: #E8F5EF;
+    --accent-2: #C8460E;
+    --accent-2-light: #FDF0EB;
+    --warning: #B07D10;
+    --warning-light: #FEF6E4;
+    --blue: #1A4B8C;
+    --blue-light: #EBF1FA;
+    --purple: #5C3D8F;
+    --purple-light: #F0EBF9;
+    --shadow: 0 1px 3px rgba(26,23,20,0.08), 0 4px 16px rgba(26,23,20,0.04);
+    --shadow-lg: 0 4px 24px rgba(26,23,20,0.12), 0 1px 4px rgba(26,23,20,0.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--bg);
+    color: var(--bg);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .header-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: #9C948A;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .header-date {
+    font-size: 13px;
+    color: #1A4B8C;
+    font-weight: 300;
+  }
+
+  /* NAV TABS */
+  .nav-tabs {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    padding: 0 24px;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    padding: 14px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: inherit;
+  }
+  .nav-tab:hover { color: var(--text-2); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* LAYOUT */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 24px 60px;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  .section-subtitle {
+    font-size: 13px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+
+  /* DATE PICKER ROW */
+  .date-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .date-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  input[type="date"] {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="date"]:focus { border-color: var(--accent); }
+
+  /* AVAILABILITY GRID */
+  .avail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .avail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.15s;
+  }
+  .avail-card:hover { box-shadow: var(--shadow-lg); }
+  .avail-card.unavailable { background: #FAFAF9; opacity: 0.7; }
+  .avail-info { flex: 1; min-width: 0; }
+  .avail-name {
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .avail-spec {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+  .avail-sched {
+    font-size: 11px;
+    color: var(--text-2);
+    margin-top: 3px;
+  }
+  .avail-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .badge-offday {
+    background: var(--warning-light);
+    color: var(--warning);
+    border: 1px solid #EDD98A;
+  }
+
+  /* TOGGLE SWITCH */
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .toggle-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+  }
+  .toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    left: 3px; top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+  .toggle-status {
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 60px;
+  }
+  .status-available { color: var(--accent); }
+  .status-unavailable { color: var(--accent-2); }
+
+  /* SPEC GROUP HEADER */
+  .spec-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    margin: 20px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spec-group-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* PATIENT FORM */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    max-width: 680px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .form-input, .form-select, .form-textarea {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+  .form-textarea { resize: vertical; min-height: 72px; }
+  .form-select { cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239C948A' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  /* WARNING BANNER */
+  .warning-banner {
+    display: none;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    border-left: 3px solid;
+  }
+  .warning-banner.warn {
+    background: var(--warning-light);
+    color: var(--warning);
+    border-color: var(--warning);
+  }
+  .warning-banner.error {
+    background: var(--accent-2-light);
+    color: var(--accent-2);
+    border-color: var(--accent-2);
+  }
+  .warning-banner.show { display: block; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: #155C3E; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-secondary {
+    background: var(--surface-2);
+    color: var(--text-2);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger {
+    background: none;
+    color: var(--accent-2);
+    border: 1px solid transparent;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .btn-danger:hover { background: var(--accent-2-light); border-color: #F4C4B0; }
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* ROSTER PAGE */
+  .roster-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .search-input {
+    padding: 9px 14px 9px 36px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    transition: border-color 0.15s;
+    width: 220px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7' stroke='%239C948A' stroke-width='2'/%3E%3Cpath d='M20 20l-4-4' stroke='%239C948A' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 10px center;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  .filter-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--text-2);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .filter-btn.active {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+  }
+
+  .roster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+  @media (max-width: 600px) { .roster-grid { grid-template-columns: 1fr; } }
+
+  .doctor-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .doctor-card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--surface-2);
+  }
+  .doctor-card-info { flex: 1; min-width: 0; }
+  .doctor-card-name {
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .doctor-card-spec {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 1px;
+  }
+  .doctor-card-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-light);
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .doctor-unavail-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent-2);
+    background: var(--accent-2-light);
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  .patient-list { padding: 8px 0; }
+  .patient-item {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .patient-item:last-child { border-bottom: none; }
+  .patient-item:hover { background: var(--bg); }
+  .patient-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-3);
+    min-width: 20px;
+    flex-shrink: 0;
+  }
+  .patient-details { flex: 1; min-width: 0; }
+  .patient-name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .patient-contact {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 1px;
+  }
+  .patient-remarks {
+    font-size: 11px;
+    color: var(--text-2);
+    font-style: italic;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .patient-status {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    flex-shrink: 0;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .status-confirmed { background: var(--blue-light); color: var(--blue); }
+  .status-arrived { background: var(--accent-light); color: var(--accent); }
+  .status-noshow { background: var(--accent-2-light); color: var(--accent-2); }
+  .status-cancelled { background: #f1f5f9; color: #475569; }
+  .status-pending { background: var(--warning-light); color: var(--warning); }
+
+  .empty-queue {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 13px;
+  }
+  .empty-queue-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 600px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 4px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* STATUS INLINE SELECTOR */
+  .status-select {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 20px;
+    flex-shrink: 0;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    appearance: none;
+    background-image: none;
+  }
+
+  .patient-item {
+    cursor: pointer;
+  }
+
+  .patient-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .status-select {
+    min-width: 112px;
+    padding: 4px 24px 4px 10px;
+    border: 1px solid transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%235f728d' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    line-height: 1.2;
+  }
+
+  .status-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(6,174,241,0.2);
+  }
+
+  .patient-arrived-btn {
+    border: 1px solid rgba(6,174,241,0.32);
+    background: #eef8ff;
+    color: #0d5f86;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+
+  .patient-arrived-btn.active {
+    background: rgba(8,153,122,0.14);
+    border-color: rgba(8,153,122,0.34);
+    color: #09795f;
+  }
+
+  .patient-delete-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid rgba(173,42,71,0.3);
+    background: rgba(173,42,71,0.08);
+    color: #8f1f3f;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .patient-delete-btn:hover {
+    background: rgba(173,42,71,0.16);
+  }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--text);
+    color: var(--bg);
+    padding: 12px 18px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+    pointer-events: all;
+  }
+  @keyframes toastIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes toastOut { from { opacity:1; transform: translateY(0); } to { opacity:0; transform: translateY(12px); } }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,23,20,0.5);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 480px;
+    overflow: hidden;
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn { from { opacity:0; transform: scale(0.97); } to { opacity:1; transform: scale(1); } }
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-weight: 700; font-size: 15px; }
+  .modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-3);
+    font-size: 18px;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .modal-close:hover { background: var(--surface-2); }
+  .modal-body { padding: 20px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* CHIP FILTERS */
+  .filter-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  /* RESPONSIVE HEADER */
+  @media (max-width: 480px) {
+    .header { padding: 0 16px; }
+    .container { padding: 16px 16px 60px; }
+    .form-card { padding: 16px; }
+  }
+
+
+  /* DRMED BRAND OVERRIDES */
+  :root {
+    --navy: #284570;
+    --steel: #4682b4;
+    --cyan: #06aef1;
+    --cyan-light: #7fbeff;
+    --bg: #f0f6fc;
+    --surface: #ffffff;
+    --surface-2: #edf4fb;
+    --border: rgba(70,130,180,0.22);
+    --text: #1a2537;
+    --text-2: #334155;
+    --text-3: #64748b;
+    --accent: #06aef1;
+    --accent-light: rgba(6,174,241,0.14);
+    --accent-2: #284570;
+    --accent-2-light: rgba(40,69,112,0.12);
+    --warning: #b7791f;
+    --warning-light: #fff6e5;
+    --blue: #284570;
+    --blue-light: rgba(70,130,180,0.18);
+    --shadow: 0 2px 10px rgba(40,69,112,0.08), 0 12px 28px rgba(40,69,112,0.06);
+    --shadow-lg: 0 16px 44px rgba(40,69,112,0.18), 0 4px 12px rgba(40,69,112,0.08);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --header-height: 76px;
+  }
+
+  body {
+    font-family: 'Public Sans', sans-serif;
+    background:
+      radial-gradient(1200px 620px at 8% -5%, rgba(127,190,255,0.24), transparent 70%),
+      radial-gradient(900px 420px at 100% 0%, rgba(6,174,241,0.2), transparent 75%),
+      linear-gradient(180deg, #f6fbff 0%, #eef5fc 56%, #f4f9ff 100%);
+    color: var(--text);
+    letter-spacing: 0.005em;
+  }
+
+  .header {
+    min-height: var(--header-height);
+    height: auto;
+    padding: 10px 24px;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(40,69,112,0.18);
+    box-shadow: 0 6px 20px rgba(40,69,112,0.08);
+  }
+
+  .header-brand {
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .header-logo-img {
+    height: 44px;
+    width: auto;
+    max-width: 180px;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,0.2));
+  }
+
+  .header-brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .header-logo {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    line-height: 1.15;
+    color: #284570;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .header-sub {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.58rem;
+    color: #5f728d;
+    font-weight: 700;
+    letter-spacing: 0.19em;
+  }
+
+  .header-date {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #284570;
+    font-weight: 600;
+  }
+
+  .nav-tabs {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 95;
+    padding: 0 24px;
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(70,130,180,0.24);
+  }
+
+  .nav-tab {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #5f728d;
+    padding: 15px 16px 13px;
+    border-bottom: 2px solid transparent;
+  }
+
+  .nav-tab:hover { color: var(--navy); }
+
+  .nav-tab.active {
+    color: var(--navy);
+    border-bottom-color: var(--cyan);
+  }
+
+  .container {
+    max-width: 1240px;
+    padding: 26px 24px 68px;
+    animation: pageEnter 0.42s ease both;
+  }
+
+  @keyframes pageEnter {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-title,
+  .modal-title,
+  .stat-value,
+  .doctor-card-name {
+    font-family: 'Montserrat', sans-serif;
+    color: var(--navy);
+  }
+
+  .section-title { font-size: 28px; letter-spacing: -0.02em; }
+  .section-subtitle { color: var(--text-2); }
+
+  .stat-value { font-size: 30px; letter-spacing: -0.04em; }
+
+  .stat-card,
+  .doctor-card,
+  .avail-card,
+  .form-card,
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  .doctor-card-header {
+    background: linear-gradient(180deg, #f9fcff 0%, #edf4fb 100%);
+  }
+
+  .doctor-card-count {
+    color: #035e88;
+    background: rgba(6,174,241,0.14);
+    border: 1px solid rgba(6,174,241,0.26);
+  }
+
+  .doctor-unavail-badge {
+    color: #23416a;
+    background: rgba(40,69,112,0.12);
+    border: 1px solid rgba(40,69,112,0.24);
+  }
+
+  .filter-btn {
+    background: #f8fbff;
+    color: var(--text-2);
+    border-color: rgba(70,130,180,0.28);
+  }
+
+  .filter-btn.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+
+  .btn {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: linear-gradient(120deg, #06aef1 0%, #1099df 100%);
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(120deg, #0598d4 0%, #0d89c8 100%);
+  }
+
+  .btn-secondary {
+    background: #f5faff;
+    color: var(--navy);
+    border: 1px solid rgba(70,130,180,0.28);
+  }
+
+  .btn-secondary:hover { background: #e8f2fd; }
+
+  .btn-danger { color: #365178; }
+
+  .btn-danger:hover {
+    background: rgba(40,69,112,0.1);
+    border-color: rgba(40,69,112,0.2);
+  }
+
+  .search-input,
+  .form-input,
+  .form-select,
+  .form-textarea,
+  input[type='date'] {
+    background: #f8fbff;
+    border-color: rgba(70,130,180,0.25);
+  }
+
+  .search-input:focus,
+  .form-input:focus,
+  .form-select:focus,
+  .form-textarea:focus,
+  input[type='date']:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(6,174,241,0.14);
+  }
+
+  .patient-item {
+    transition: background 0.16s ease, transform 0.16s ease;
+  }
+
+  .patient-item:hover {
+    background: #f3f9ff;
+    transform: translateX(2px);
+  }
+
+  .status-confirmed { background: rgba(40,69,112,0.14); color: #23416a; }
+  .status-arrived { background: rgba(8,153,122,0.14); color: #09795f; }
+  .status-noshow { background: rgba(173,42,71,0.13); color: #942345; }
+  .status-cancelled { background: rgba(100,116,139,0.16); color: #475569; }
+  .status-pending { background: rgba(183,121,31,0.16); color: #9a6114; }
+
+  .toast {
+    background: var(--navy);
+    color: #fff;
+    border-left: 3px solid var(--cyan);
+  }
+
+  .modal-overlay {
+    background: rgba(22,43,78,0.5);
+    backdrop-filter: blur(7px);
+  }
+
+  .date-label,
+  .form-label,
+  .spec-group-label,
+  .stat-label {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+  }
+
+  @media (max-width: 768px) {
+    :root { --header-height: 70px; }
+
+    .header {
+      padding: 10px 16px;
+      gap: 8px;
+    }
+
+    .header-logo-img {
+      height: 36px;
+      max-width: 130px;
+    }
+
+    .header-logo {
+      font-size: 0.84rem;
+      white-space: normal;
+    }
+
+    .header-sub {
+      letter-spacing: 0.12em;
+      font-size: 0.52rem;
+    }
+
+    .header-date {
+      font-size: 0.62rem;
+      text-align: right;
+    }
+
+    .nav-tabs {
+      top: var(--header-height);
+      padding: 0 12px;
+    }
+
+    .nav-tab {
+      font-size: 0.62rem;
+      padding: 12px 10px;
+    }
+
+    .container {
+      padding: 18px 12px 56px;
+    }
+
+    .section-title {
+      font-size: 22px;
+    }
+  }
+
+  /* DRMED SCHEDULING EXTENSIONS */
+  .avail-week-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 8px;
+  }
+
+  @media (max-width: 1280px) {
+    .avail-week-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 760px) {
+    .avail-week-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .avail-day-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    padding: 12px;
+  }
+
+  .avail-day-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(70,130,180,0.16);
+    margin-bottom: 10px;
+  }
+
+  .avail-day-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  .avail-day-meta {
+    font-size: 0.72rem;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+
+  .avail-day-doctors {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .avail-day-subhead {
+    margin-top: 4px;
+    padding-top: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    border-top: 1px dashed rgba(70,130,180,0.24);
+  }
+
+  .avail-day-empty {
+    font-size: 0.74rem;
+    color: var(--text-3);
+    padding: 8px 2px;
+  }
+
+  .avail-doctor-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid rgba(70,130,180,0.2);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    background: #fbfdff;
+  }
+
+  .avail-doctor-row.unavailable {
+    opacity: 0.72;
+    background: #f8fafc;
+  }
+
+  .calendar-layout {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 14px;
+  }
+
+  .calendar-shell,
+  .calendar-day-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .calendar-weekdays {
+    margin-bottom: 8px;
+  }
+
+  .calendar-weekday {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    text-align: center;
+  }
+
+  .calendar-day {
+    border: 1px solid rgba(70,130,180,0.22);
+    border-radius: 10px;
+    background: #f9fcff;
+    min-height: 78px;
+    text-align: left;
+    padding: 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  }
+
+  .calendar-day:hover {
+    border-color: rgba(6,174,241,0.5);
+    transform: translateY(-1px);
+  }
+
+  .calendar-day.today {
+    box-shadow: 0 0 0 1px rgba(6,174,241,0.36) inset;
+  }
+
+  .calendar-day.active {
+    border-color: var(--cyan);
+    background: #ecf8ff;
+  }
+
+  .calendar-day.other-month {
+    opacity: 0.45;
+  }
+
+  .calendar-day-number {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+  }
+
+  .calendar-day-count,
+  .calendar-day-confirmed {
+    font-size: 0.62rem;
+    line-height: 1.25;
+    color: var(--text-2);
+  }
+
+  .calendar-day-confirmed {
+    color: #056a9a;
+    font-weight: 600;
+  }
+
+  .calendar-day-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .calendar-day-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 460px;
+    overflow: auto;
+    padding-right: 3px;
+  }
+
+  .calendar-entry {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid rgba(70,130,180,0.2);
+    border-radius: 10px;
+    padding: 9px 10px;
+    background: #fbfdff;
+  }
+
+  .calendar-entry-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .calendar-cancel-btn {
+    border: 1px solid rgba(148,163,184,0.45);
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+  }
+
+  .calendar-cancel-btn.active {
+    background: rgba(100,116,139,0.18);
+    border-color: rgba(100,116,139,0.5);
+  }
+
+  .calendar-delete-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(173,42,71,0.3);
+    background: rgba(173,42,71,0.08);
+    color: #8f1f3f;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .calendar-delete-btn:hover {
+    background: rgba(173,42,71,0.16);
+  }
+
+  .calendar-entry-name {
+    font-weight: 700;
+    font-size: 0.84rem;
+    color: var(--navy);
+  }
+
+  .calendar-entry-meta {
+    margin-top: 3px;
+    font-size: 0.69rem;
+    color: var(--text-3);
+    line-height: 1.35;
+  }
+
+  .calendar-confirm-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.68rem;
+    color: var(--text-2);
+    font-weight: 600;
+  }
+
+  .calendar-confirm-wrap input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--cyan);
+    cursor: pointer;
+  }
+
+  .calendar-empty {
+    font-size: 0.76rem;
+    color: var(--text-3);
+    padding: 10px 2px;
+  }
+
+  @media (max-width: 980px) {
+    .calendar-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .calendar-day-list {
+      max-height: none;
+    }
+
+    .calendar-entry {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <img class="header-logo-img" src="DRMED LOGO.png" alt="DRMed Healthcare Inc." onerror="this.style.display='none'">
+    <div class="header-brand-text">
+      <span class="header-logo">DRMed Clinic Management</span>
+      <span class="header-sub">PATIENT QUEUE CONSOLE</span>
+    </div>
+  </div>
+  <span class="header-date" id="headerDate"></span>
+</header>
+
+<nav class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('roster')">Patient Roster</button>
+  <button class="nav-tab" onclick="switchTab('book')">Add Patient</button>
+  <button class="nav-tab" onclick="switchTab('availability')">Doctor Availability</button>
+  <button class="nav-tab" onclick="switchTab('calendar')">Booking Calendar</button>
+</nav>
+
+<div class="container">
+
+  <!-- ===== ROSTER PAGE ===== -->
+  <div class="page active" id="page-roster">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Patient Roster</div>
+        <div class="section-subtitle">Real-time queue for DRMED specialists</div>
+      </div>
+      <div class="date-row">
+        <span class="date-label">Date</span>
+        <input type="date" id="rosterDate" onchange="renderRoster()">
+      </div>
+    </div>
+
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">Total Patients</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statConfirmed" style="color:var(--blue)">0</div>
+        <div class="stat-label">Confirmed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statArrived" style="color:var(--accent)">0</div>
+        <div class="stat-label">Arrived</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statNoShow" style="color:var(--accent-2)">0</div>
+        <div class="stat-label">No Show</div>
+      </div>
+    </div>
+
+    <div class="roster-controls">
+      <input type="text" class="search-input" placeholder="Search patient…" id="rosterSearch" oninput="renderRoster()">
+      <div class="filter-chips" id="filterChips">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter(this,'all')">All</button>
+        <button class="filter-btn" data-filter="Pending" onclick="setFilter(this,'Pending')">Pending</button>
+        <button class="filter-btn" data-filter="Confirmed" onclick="setFilter(this,'Confirmed')">Confirmed</button>
+        <button class="filter-btn" data-filter="Arrived" onclick="setFilter(this,'Arrived')">Arrived</button>
+        <button class="filter-btn" data-filter="No Show" onclick="setFilter(this,'No Show')">No Show</button>
+        <button class="filter-btn" data-filter="Cancelled" onclick="setFilter(this,'Cancelled')">Cancelled</button>
+      </div>
+    </div>
+
+    <div class="roster-grid" id="rosterGrid"></div>
+  </div>
+
+  <!-- ===== BOOK PAGE ===== -->
+  <div class="page" id="page-book">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Add Patient</div>
+        <div class="section-subtitle">Register a new patient to a doctor's queue</div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div id="bookWarning" class="warning-banner"></div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Date *</label>
+          <input type="date" class="form-input" id="bookDate" onchange="onBookDateChange()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Doctor *</label>
+          <select class="form-select" id="bookDoctor" onchange="onBookDoctorChange()">
+            <option value="">— Select Doctor —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Patient Name *</label>
+          <input type="text" class="form-input" id="bookName" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact Number</label>
+          <input type="tel" class="form-input" id="bookContact" placeholder="09XX-XXX-XXXX">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="bookStatus">
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Arrived">Arrived</option>
+            <option value="No Show">No Show</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Remarks</label>
+          <textarea class="form-textarea" id="bookRemarks" placeholder="Notes, reason for visit, referral…"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="addPatient()">Add to Queue</button>
+        <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AVAILABILITY PAGE ===== -->
+  <div class="page" id="page-availability">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Doctor Availability</div>
+        <div class="section-subtitle">Monday to Saturday view (no Sunday) for doctor availability tracking</div>
+      </div>
+      <div class="date-row">
+        <span class="date-label">Date</span>
+        <input type="date" id="availDate" onchange="renderAvailability()">
+      </div>
+    </div>
+    <div id="availGrid"></div>
+  </div>
+
+  <!-- ===== BOOKING CALENDAR PAGE ===== -->
+  <div class="page" id="page-calendar">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Booking Calendar</div>
+        <div class="section-subtitle">Track daily queue counts, contact numbers, and confirmation status</div>
+      </div>
+      <div class="date-row">
+        <span class="date-label">Month</span>
+        <input type="month" class="form-input" id="calendarMonth" onchange="renderCalendar()">
+      </div>
+    </div>
+
+    <div class="calendar-layout">
+      <div class="calendar-shell">
+        <div class="calendar-weekdays">
+          <span class="calendar-weekday">Sun</span>
+          <span class="calendar-weekday">Mon</span>
+          <span class="calendar-weekday">Tue</span>
+          <span class="calendar-weekday">Wed</span>
+          <span class="calendar-weekday">Thu</span>
+          <span class="calendar-weekday">Fri</span>
+          <span class="calendar-weekday">Sat</span>
+        </div>
+        <div class="calendar-grid" id="bookingCalendarGrid"></div>
+      </div>
+
+      <div class="calendar-day-panel">
+        <div class="calendar-day-head">
+          <div class="section-subtitle" id="calendarDayLabel">Select a date</div>
+          <span class="doctor-card-count" id="calendarDayCount">0 patients</span>
+        </div>
+        <div class="calendar-day-list" id="calendarDayList"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Edit Patient Entry</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="editWarning" class="warning-banner"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Patient Name</label>
+          <input type="text" class="form-input" id="editName">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact</label>
+          <input type="tel" class="form-input" id="editContact">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="editStatus">
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Arrived">Arrived</option>
+            <option value="No Show">No Show</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Remarks</label>
+          <textarea class="form-textarea" id="editRemarks"></textarea>
+        </div>
+      </div>
+      <div class="form-actions modal-actions" style="margin-top:16px">
+        <button class="btn btn-danger" onclick="deletePatient()">Delete</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===== DOCTOR DATA =====
+const DOCTORS = [
+  // OB-GYN
+  { id:'d01', name:'Dr. Castelo-Brojas', spec:'OB-GYN', group:'OB-GYN', days:[1,3], sched:'Mon/Wed 10:00–12:00' },
+  { id:'d02', name:'Dr. Nadia Mariano', spec:'OB-GYN', group:'OB-GYN', days:[6], sched:'Sat 4:00 PM' },
+  // Pediatrics
+  { id:'d03', name:'Dr. Gayo', spec:'Pediatrics', group:'Pediatrics', days:[1,3,5,6], sched:'Mon/Wed/Fri 10–12, Sat 2–4' },
+  { id:'d04', name:'Dr. Antonio', spec:'Pediatrics', group:'Pediatrics', days:[2,5], sched:'Tue/Fri 1–4' },
+  { id:'d05', name:'Dr. Vicencio', spec:'Pediatrics', group:'Pediatrics', days:[0,1,2,3,4,5,6], sched:'By Appointment' },
+  // Family Medicine
+  { id:'d06', name:'Dr. Pacis-Caling', spec:'Family Medicine', group:'Family Medicine', days:[1], sched:'Mon 9:30–11:30' },
+  { id:'d07', name:'Dr. Mendoza', spec:'Family Medicine', group:'Family Medicine', days:[2,4,5], sched:'Tue/Thu/Fri 1–5' },
+  // Internal Medicine
+  { id:'d08', name:'Dr. Vicencio', spec:'Cardiology', group:'Internal Medicine', days:[2,6], sched:'Tue 5–7 PM, Sat 3–5' },
+  { id:'d09', name:'Dr. Manuel', spec:'Pulmonology', group:'Internal Medicine', days:[3], sched:'Wed 2–4' },
+  { id:'d10', name:'Dr. Dantes', spec:'Gastroenterology', group:'Internal Medicine', days:[5], sched:'Fri 3–5' },
+  { id:'d11', name:'Dr. Angelle Dantes', spec:'Oncology', group:'Internal Medicine', days:[0,1,2,3,4,5,6], sched:'By Appointment' },
+  { id:'d12', name:'Dr. Baldeviso', spec:'Diabetology', group:'Internal Medicine', days:[0,1,2,3,4,5,6], sched:'By Appointment' },
+  { id:'d13', name:'Dr. Libiran', spec:'Nephrology', group:'Internal Medicine', days:[0,1,2,3,4,5,6], sched:'By Appointment' },
+  // Specialists
+  { id:'d14', name:'Dr. Arcega', spec:'Ophthalmology', group:'Specialists', days:[2,5], sched:'Tue/Fri 9:00 AM' },
+  { id:'d15', name:'Dr. Lorenzo', spec:'ENT', group:'Specialists', days:[2,6], sched:'Tue 9–11, Sat 4–6' },
+  { id:'d16', name:'Dr. Anglo', spec:'ENT', group:'Specialists', days:[4,5], sched:'Thu 2–4, Fri 10–12' },
+  { id:'d17', name:'Dr. Daniel Mariano', spec:'Radiology', group:'Specialists', days:[3,5], sched:'Wed/Fri 8:00 AM' },
+  { id:'d18', name:'Dr. Alvarez', spec:'Surgery', group:'Specialists', days:[0,1,2,3,4,5,6], sched:'By Appointment' },
+];
+
+// ===== STATE =====
+let patients = JSON.parse(localStorage.getItem('drmed_cms_patients_v1') || '[]');
+let availability = JSON.parse(localStorage.getItem('drmed_cms_avail_v1') || '{}');
+let editingId = null;
+let activeFilter = 'all';
+let activeCalendarDate = today();
+let lastKnownToday = today();
+
+function saveState() {
+  localStorage.setItem('drmed_cms_patients_v1', JSON.stringify(patients));
+  localStorage.setItem('drmed_cms_avail_v1', JSON.stringify(availability));
+}
+
+// ===== UTILS =====
+function toDateStr(d) {
+  if (!(d instanceof Date)) return d;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function today() { return toDateStr(new Date()); }
+function getDay(dateStr) {
+  if (!dateStr) return -1;
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.getDay(); // 0=Sun, 1=Mon ... 6=Sat
+}
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+}
+function isAvailable(doctorId, dateStr) {
+  const key = `${doctorId}::${dateStr}`;
+  if (key in availability) return availability[key];
+
+  const doctor = DOCTORS.find(d => d.id === doctorId);
+  if (doctor && isByAppointmentDoctor(doctor)) {
+    return false; // by-appointment doctors start as unavailable until toggled on per day
+  }
+
+  return true; // fixed-schedule doctors default available
+}
+function isByAppointmentDoctor(doctor) {
+  return /by appointment/i.test(String(doctor.sched || ''));
+}
+function isDoctorOnSchedule(doctor, dateStr) {
+  if (isByAppointmentDoctor(doctor)) return true;
+  const day = getDay(dateStr);
+  return doctor.days.includes(day);
+}
+function isDoctorRegularScheduled(doctor, dateStr) {
+  if (isByAppointmentDoctor(doctor)) return false;
+  const day = getDay(dateStr);
+  return doctor.days.includes(day);
+}
+function startOfWeek(dateStr) {
+  const d = new Date((dateStr || today()) + 'T00:00:00');
+  const diff = (d.getDay() + 6) % 7; // Monday as week start
+  d.setDate(d.getDate() - diff);
+  return toDateStr(d);
+}
+function addDays(dateStr, offset) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + offset);
+  return toDateStr(d);
+}
+function refreshHeaderDate() {
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+}
+function syncDayRollover(force = false) {
+  const currentToday = today();
+  if (!force && currentToday === lastKnownToday) return;
+
+  const prevToday = lastKnownToday;
+  lastKnownToday = currentToday;
+
+  refreshHeaderDate();
+
+  const rosterDateEl = document.getElementById('rosterDate');
+  const availDateEl = document.getElementById('availDate');
+  const bookDateEl = document.getElementById('bookDate');
+  const monthEl = document.getElementById('calendarMonth');
+
+  if (rosterDateEl && (force || rosterDateEl.value === prevToday || !rosterDateEl.value)) rosterDateEl.value = currentToday;
+  if (availDateEl && (force || availDateEl.value === prevToday || !availDateEl.value)) availDateEl.value = currentToday;
+  if (bookDateEl && (force || bookDateEl.value === prevToday || !bookDateEl.value)) bookDateEl.value = currentToday;
+  if (monthEl && (force || monthEl.value === prevToday.slice(0,7) || !monthEl.value)) monthEl.value = currentToday.slice(0,7);
+  if (force || activeCalendarDate === prevToday || !activeCalendarDate) activeCalendarDate = currentToday;
+
+  renderRoster();
+  renderAvailability();
+  renderCalendar();
+}
+function genId() { return 'p' + Date.now() + Math.random().toString(36).slice(2,7); }
+
+// ===== STATUS COLORS =====
+function statusClass(s) {
+  if (s === 'Arrived') return 'status-arrived';
+  if (s === 'No Show') return 'status-noshow';
+  if (s === 'Cancelled') return 'status-cancelled';
+  if (s === 'Pending') return 'status-pending';
+  return 'status-confirmed';
+}
+
+// ===== TABS =====
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const idx = ['roster','book','availability','calendar'].indexOf(tab);
+  if (tabs[idx]) tabs[idx].classList.add('active');
+  if (tab === 'roster') renderRoster();
+  if (tab === 'availability') renderAvailability();
+  if (tab === 'calendar') renderCalendar();
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ===== INIT =====
+function init() {
+  const t = today();
+  lastKnownToday = t;
+  document.getElementById('rosterDate').value = t;
+  document.getElementById('availDate').value = t;
+  document.getElementById('bookDate').value = t;
+  const monthInput = document.getElementById('calendarMonth');
+  if (monthInput) monthInput.value = t.slice(0, 7);
+  activeCalendarDate = t;
+  refreshHeaderDate();
+
+  // Populate doctor select
+  const sel = document.getElementById('bookDoctor');
+  const groups = {};
+  DOCTORS.forEach(d => {
+    if (!groups[d.group]) groups[d.group] = [];
+    groups[d.group].push(d);
+  });
+  Object.entries(groups).forEach(([g, docs]) => {
+    const og = document.createElement('optgroup');
+    og.label = g;
+    docs.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id;
+      o.textContent = `${d.name} (${d.spec})`;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+
+  syncDayRollover(true);
+  setInterval(() => syncDayRollover(false), 60000);
+}
+
+// ===== AVAILABILITY =====
+function renderAvailRow(doctor, dateStr, isAppointmentBlock) {
+  const avail = isAvailable(doctor.id, dateStr);
+  return `
+    <div class="avail-doctor-row ${!avail ? 'unavailable' : ''}">
+      <div class="avail-info">
+        <div class="avail-name">${doctor.name}</div>
+        <div class="avail-spec">${doctor.spec}${isAppointmentBlock ? ' · By Appointment' : ''}</div>
+        <div class="avail-sched">${doctor.sched}</div>
+      </div>
+      <div class="toggle-wrap">
+        <span class="toggle-status ${avail ? 'status-available' : 'status-unavailable'}">
+          ${avail ? 'Available' : 'Unavail.'}
+        </span>
+        <label class="toggle">
+          <input type="checkbox" ${avail ? 'checked' : ''} onchange="toggleAvail('${doctor.id}','${dateStr}',this)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>`;
+}
+
+function renderAvailability() {
+  const availInput = document.getElementById('availDate');
+  let anchorDate = (availInput && availInput.value) || today();
+  const weekDates = [];
+  const cursor = new Date(anchorDate + 'T00:00:00');
+
+  // Normalize Sunday selection to Monday so Sunday is fully removed from cards.
+  if (cursor.getDay() === 0) {
+    cursor.setDate(cursor.getDate() + 1);
+    anchorDate = toDateStr(cursor);
+    if (availInput) availInput.value = anchorDate;
+  }
+
+  while (weekDates.length < 6) {
+    if (cursor.getDay() !== 0) {
+      weekDates.push(toDateStr(new Date(cursor)));
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  const appointmentDocs = DOCTORS.filter(isByAppointmentDoctor);
+
+  let html = `<div class="avail-week-grid">`;
+
+  weekDates.forEach(dateStr => {
+    const regularDocs = DOCTORS.filter(d => isDoctorRegularScheduled(d, dateStr));
+    const dayLabel = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'long' });
+    const dateLabel = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+    const todayTag = dateStr === today() ? `<span class="avail-badge badge-offday">Today</span>` : '';
+
+    html += `
+      <section class="avail-day-card">
+        <div class="avail-day-head">
+          <div>
+            <div class="avail-day-title">${dayLabel}</div>
+            <div class="avail-day-meta">${dateLabel}</div>
+          </div>
+          ${todayTag}
+        </div>
+        <div class="avail-day-doctors">`;
+
+    if (!regularDocs.length) {
+      html += `<div class="avail-day-empty">No fixed doctor schedules.</div>`;
+    } else {
+      regularDocs.forEach(d => { html += renderAvailRow(d, dateStr, false); });
+    }
+
+    html += `<div class="avail-day-subhead">By Appointment</div>`;
+    appointmentDocs.forEach(d => { html += renderAvailRow(d, dateStr, true); });
+
+    html += `</div></section>`;
+  });
+
+  html += `</div>`;
+  document.getElementById('availGrid').innerHTML = html;
+}
+
+function toggleAvail(doctorId, dateStr, el) {
+  const key = `${doctorId}::${dateStr}`;
+  availability[key] = el.checked;
+  saveState();
+  renderAvailability();
+  showToast(el.checked ? '✓ Doctor marked Available' : '✕ Doctor marked Unavailable');
+}
+
+// ===== BOOKING FORM =====
+function populateDoctorSelect(selectEl, selectedId) {
+  // Already done for bookDoctor in init; for modal we reuse
+}
+
+function onBookDateChange() {
+  onBookDoctorChange();
+}
+
+function onBookDoctorChange() {
+  const dateStr = document.getElementById('bookDate').value;
+  const docId = document.getElementById('bookDoctor').value;
+  const warn = document.getElementById('bookWarning');
+  warn.className = 'warning-banner';
+  warn.textContent = '';
+
+  if (!docId || !dateStr) return;
+
+  if (getDay(dateStr) === 0) {
+    warn.textContent = '⚠ Sunday bookings are not available. Please select Monday to Saturday.';
+    warn.className = 'warning-banner error show';
+    return;
+  }
+  const doc = DOCTORS.find(d => d.id === docId);
+  if (!doc) return;
+
+  const avail = isAvailable(docId, dateStr);
+  const onSched = isDoctorOnSchedule(doc, dateStr);
+
+  if (!avail) {
+    warn.textContent = `⚠ ${doc.name} is marked UNAVAILABLE for ${formatDate(dateStr)}. Please choose a different date or doctor.`;
+    warn.className = 'warning-banner error show';
+  } else if (!onSched) {
+    warn.textContent = `⚠ ${doc.name} is not usually scheduled on this day (${new Date(dateStr+'T00:00:00').toLocaleDateString('en-PH',{weekday:'long'})}). Regular schedule: ${doc.sched}.`;
+    warn.className = 'warning-banner warn show';
+  }
+}
+
+function addPatient() {
+  const date = document.getElementById('bookDate').value;
+  const docId = document.getElementById('bookDoctor').value;
+  const name = document.getElementById('bookName').value.trim();
+  const contact = document.getElementById('bookContact').value.trim();
+  const status = document.getElementById('bookStatus').value;
+  const remarks = document.getElementById('bookRemarks').value.trim();
+
+  if (!date || !docId || !name) {
+    showToast('⚠ Please fill in all required fields.');
+    return;
+  }
+
+  if (getDay(date) === 0) {
+    showToast('⛔ Sunday bookings are not available. Please choose Monday to Saturday.');
+    return;
+  }
+
+  const doc = DOCTORS.find(d => d.id === docId);
+  if (!isAvailable(docId, date)) {
+    showToast('⛔ Cannot book — doctor is unavailable on this date.');
+    return;
+  }
+
+  patients.push({ id: genId(), date, docId, name, contact, status, remarks, createdAt: Date.now() });
+  saveState();
+  clearForm();
+  showToast(`✓ ${name} added to ${doc.name}'s queue!`);
+  switchTab('roster');
+  document.getElementById('rosterDate').value = date;
+  renderRoster();
+  renderCalendar();
+}
+
+function clearForm() {
+  document.getElementById('bookName').value = '';
+  document.getElementById('bookContact').value = '';
+  document.getElementById('bookRemarks').value = '';
+  document.getElementById('bookStatus').value = 'Pending';
+  document.getElementById('bookWarning').className = 'warning-banner';
+}
+
+// ===== ROSTER =====
+let currentFilter = 'all';
+
+function setFilter(el, val) {
+  currentFilter = val;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderRoster();
+}
+
+function renderRoster() {
+  const dateStr = document.getElementById('rosterDate').value;
+  const search = (document.getElementById('rosterSearch').value || '').toLowerCase();
+
+  const allDayPatients = patients.filter(p => p.date === dateStr);
+  let dayPatients = [...allDayPatients];
+
+  // Stats
+  document.getElementById('statTotal').textContent = allDayPatients.length;
+  document.getElementById('statConfirmed').textContent = allDayPatients.filter(p => p.status === 'Confirmed').length;
+  document.getElementById('statArrived').textContent = allDayPatients.filter(p => p.status === 'Arrived').length;
+  document.getElementById('statNoShow').textContent = allDayPatients.filter(p => p.status === 'No Show').length;
+
+  // Filter
+  if (currentFilter !== 'all') dayPatients = dayPatients.filter(p => p.status === currentFilter);
+  if (search) dayPatients = dayPatients.filter(p =>
+    p.name.toLowerCase().includes(search) ||
+    (p.remarks || '').toLowerCase().includes(search) ||
+    (p.contact || '').toLowerCase().includes(search)
+  );
+
+  // Show fixed-schedule doctors for the day.
+  // By-appointment-only doctors appear only when they have bookings on this date.
+  const regularScheduledDocs = DOCTORS.filter(d => isDoctorRegularScheduled(d, dateStr));
+  const byAppointmentBookedIds = new Set(allDayPatients.map(p => p.docId));
+  const byAppointmentBookedDocs = DOCTORS.filter(d => isByAppointmentDoctor(d) && byAppointmentBookedIds.has(d.id));
+  const showDocs = [
+    ...regularScheduledDocs,
+    ...byAppointmentBookedDocs.filter(d => !regularScheduledDocs.some(sd => sd.id === d.id))
+  ];
+
+  let html = '';
+  if (showDocs.length === 0) {
+    html = `<div style="text-align:center;padding:48px 0;color:var(--text-3)">
+      <div style="font-size:48px;margin-bottom:12px">📅</div>
+      <div style="font-weight:600">No scheduled doctors on this day</div>
+      <div style="font-size:12px;margin-top:4px">By-appointment doctors will appear once patients are booked.</div>
+    </div>`;
+  } else {
+    showDocs.forEach(doc => {
+      const docPatients = dayPatients.filter(p => p.docId === doc.id).sort((a, b) => a.createdAt - b.createdAt);
+      const avail = isAvailable(doc.id, dateStr);
+      html += `
+        <div class="doctor-card">
+          <div class="doctor-card-header">
+            <div class="doctor-card-info">
+              <div class="doctor-card-name">${doc.name}</div>
+              <div class="doctor-card-spec">${doc.spec} · ${doc.sched}</div>
+            </div>
+            ${!avail ? `<span class="doctor-unavail-badge">Unavailable</span>` : `<span class="doctor-card-count">${docPatients.length} patient${docPatients.length !== 1 ? 's' : ''}</span>`}
+          </div>
+          <div class="patient-list">`;
+
+      if (docPatients.length === 0) {
+        html += `<div class="empty-queue"><div class="empty-queue-icon">○</div>No patients queued</div>`;
+      } else {
+        docPatients.forEach((p, i) => {
+          const statusValue = p.status === 'Arrived' ? 'Confirmed' : p.status;
+          const arrivedActive = p.status === 'Arrived';
+          html += `
+            <div class="patient-item" onclick="openEdit('${p.id}')">
+              <span class="patient-num">${i + 1}</span>
+              <div class="patient-details">
+                <div class="patient-name">${escHtml(p.name)}</div>
+                <div class="patient-contact">${escHtml(p.contact || 'No contact number')}</div>
+                ${p.remarks ? `<div class="patient-remarks">${escHtml(p.remarks)}</div>` : ''}
+              </div>
+              <div class="patient-actions">
+                <select class="status-select ${statusClass(statusValue)}" onclick="event.stopPropagation()" onchange="setRosterStatus('${p.id}', this.value)">
+                  <option value="Pending" ${statusValue === 'Pending' ? 'selected' : ''}>Pending</option>
+                  <option value="Confirmed" ${statusValue === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
+                  <option value="No Show" ${statusValue === 'No Show' ? 'selected' : ''}>No Show</option>
+                  <option value="Cancelled" ${statusValue === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                </select>
+                <button type="button" class="patient-arrived-btn ${arrivedActive ? 'active' : ''}" onclick="event.stopPropagation(); toggleRosterArrived('${p.id}')">${arrivedActive ? 'Undo Arrived' : 'Arrived'}</button>
+                <button type="button" class="patient-delete-btn" aria-label="Delete patient" title="Delete patient" onclick="event.stopPropagation(); quickDeletePatient('${p.id}')">&times;</button>
+              </div>
+            </div>`;
+        });
+      }
+
+      html += `</div></div>`;
+    });
+  }
+
+  document.getElementById('rosterGrid').innerHTML = html;
+}
+
+function setRosterStatus(patientId, nextStatus) {
+  const p = patients.find(x => x.id === patientId);
+  if (!p) return;
+  p.status = nextStatus;
+  saveState();
+  renderRoster();
+  renderCalendar();
+  showToast(`Status updated: ${nextStatus}`);
+}
+
+function toggleRosterArrived(patientId) {
+  const p = patients.find(x => x.id === patientId);
+  if (!p) return;
+  const markArrived = p.status !== 'Arrived';
+  p.status = markArrived ? 'Arrived' : 'Confirmed';
+  saveState();
+  renderRoster();
+  renderCalendar();
+  showToast(markArrived ? '✓ Patient marked as arrived' : 'Patient moved back to confirmed');
+}
+
+function quickDeletePatient(patientId) {
+  const exists = patients.some(p => p.id === patientId);
+  if (!exists) return;
+  patients = patients.filter(p => p.id !== patientId);
+  if (editingId === patientId) closeModal();
+  saveState();
+  renderRoster();
+  renderCalendar();
+  showToast('Patient removed from queue');
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getDoctorById(docId) {
+  return DOCTORS.find(d => d.id === docId);
+}
+
+function renderCalendar() {
+  const monthInput = document.getElementById('calendarMonth');
+  const grid = document.getElementById('bookingCalendarGrid');
+  if (!monthInput || !grid) return;
+
+  const monthValue = monthInput.value || today().slice(0, 7);
+  if (!monthInput.value) monthInput.value = monthValue;
+
+  if (!activeCalendarDate || activeCalendarDate.slice(0, 7) !== monthValue) {
+    activeCalendarDate = monthValue + '-01';
+  }
+
+  const [yearRaw, monthRaw] = monthValue.split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!year || !month) return;
+
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd = new Date(year, month, 0);
+
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+  const gridEnd = new Date(monthEnd);
+  gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+
+  let htmlDays = '';
+  for (let d = new Date(gridStart); d <= gridEnd; d.setDate(d.getDate() + 1)) {
+    const dateStr = toDateStr(new Date(d));
+    const dayPatients = patients.filter(p => p.date === dateStr);
+    const confirmedCount = dayPatients.filter(p => p.status === 'Confirmed' || p.status === 'Arrived').length;
+    const isCurrentMonth = d.getMonth() === (month - 1);
+    const isActive = dateStr === activeCalendarDate;
+    const isToday = dateStr === today();
+
+    htmlDays += `
+      <button type="button" class="calendar-day ${isCurrentMonth ? '' : 'other-month'} ${isActive ? 'active' : ''} ${isToday ? 'today' : ''}" onclick="selectCalendarDate('${dateStr}')">
+        <span class="calendar-day-number">${d.getDate()}</span>
+        ${dayPatients.length ? `<span class="calendar-day-count">${dayPatients.length} queued</span>` : ''}
+        ${confirmedCount ? `<span class="calendar-day-confirmed">${confirmedCount} confirmed</span>` : ''}
+      </button>`;
+  }
+
+  grid.innerHTML = htmlDays;
+  renderCalendarDayDetails();
+}
+
+function selectCalendarDate(dateStr) {
+  activeCalendarDate = dateStr;
+  renderCalendar();
+}
+
+function renderCalendarDayDetails() {
+  const dayLabel = document.getElementById('calendarDayLabel');
+  const dayCount = document.getElementById('calendarDayCount');
+  const dayList = document.getElementById('calendarDayList');
+  if (!dayLabel || !dayCount || !dayList) return;
+
+  if (!activeCalendarDate) {
+    dayLabel.textContent = 'Select a date';
+    dayCount.textContent = '0 patients';
+    dayList.innerHTML = '<div class="calendar-empty">No date selected.</div>';
+    return;
+  }
+
+  const dayPatients = patients
+    .filter(p => p.date === activeCalendarDate)
+    .sort((a, b) => a.createdAt - b.createdAt);
+
+  const confirmedCount = dayPatients.filter(p => p.status === 'Confirmed' || p.status === 'Arrived').length;
+  dayLabel.textContent = formatDate(activeCalendarDate);
+  dayCount.textContent = `${dayPatients.length} patient${dayPatients.length !== 1 ? 's' : ''} · ${confirmedCount} confirmed`;
+
+  if (!dayPatients.length) {
+    dayList.innerHTML = '<div class="calendar-empty">No patients booked for this date.</div>';
+    return;
+  }
+
+  let htmlRows = '';
+  dayPatients.forEach(p => {
+    const doctor = getDoctorById(p.docId);
+    const confirmed = p.status === 'Confirmed' || p.status === 'Arrived';
+    const isCancelled = p.status === 'Cancelled';
+    htmlRows += `
+      <div class="calendar-entry">
+        <div class="calendar-entry-main">
+          <div class="calendar-entry-name">${escHtml(p.name)}</div>
+          <div class="calendar-entry-meta">${escHtml(p.contact || 'No contact number')} · ${escHtml(doctor ? doctor.name : 'Unknown Doctor')} (${escHtml(doctor ? doctor.spec : '-')})</div>
+        </div>
+        <span class="patient-status ${statusClass(p.status)}">${escHtml(p.status || 'Pending')}</span>
+        <div class="calendar-entry-actions">
+          <label class="calendar-confirm-wrap">
+            <input type="checkbox" ${confirmed ? 'checked' : ''} onchange="toggleCalendarConfirm('${p.id}', this.checked)">
+            <span>Confirmed</span>
+          </label>
+          <button type="button" class="calendar-cancel-btn ${isCancelled ? 'active' : ''}" onclick="toggleCalendarCancelled('${p.id}', ${isCancelled ? 'false' : 'true'})">${isCancelled ? 'Undo Cancel' : 'Cancelled'}</button>
+          <button type="button" class="calendar-delete-btn" aria-label="Delete patient" title="Delete patient" onclick="quickDeletePatient('${p.id}')">&times;</button>
+        </div>
+      </div>`;
+  });
+
+  dayList.innerHTML = htmlRows;
+}
+
+function toggleCalendarConfirm(patientId, checked) {
+  const p = patients.find(x => x.id === patientId);
+  if (!p) return;
+
+  if (checked) {
+    if (p.status !== 'Arrived') p.status = 'Confirmed';
+  } else {
+    p.status = 'Pending';
+  }
+
+  saveState();
+  renderRoster();
+  renderCalendar();
+  showToast(checked ? '✓ Patient marked as confirmed' : 'Patient moved to pending confirmation');
+}
+
+function toggleCalendarCancelled(patientId, shouldCancel) {
+  const p = patients.find(x => x.id === patientId);
+  if (!p) return;
+
+  p.status = shouldCancel ? 'Cancelled' : 'Pending';
+  saveState();
+  renderRoster();
+  renderCalendar();
+  showToast(shouldCancel ? 'Patient marked as cancelled' : 'Cancelled status removed');
+}
+
+// ===== EDIT MODAL =====
+function openEdit(patientId) {
+  const p = patients.find(x => x.id === patientId);
+  if (!p) return;
+  editingId = patientId;
+  document.getElementById('editName').value = p.name;
+  document.getElementById('editContact').value = p.contact;
+  document.getElementById('editStatus').value = p.status;
+  document.getElementById('editRemarks').value = p.remarks || '';
+  document.getElementById('editWarning').className = 'warning-banner';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('open');
+  editingId = null;
+}
+
+function saveEdit() {
+  if (!editingId) return;
+  const p = patients.find(x => x.id === editingId);
+  if (!p) return;
+  p.name = document.getElementById('editName').value.trim();
+  p.contact = document.getElementById('editContact').value.trim();
+  p.status = document.getElementById('editStatus').value;
+  p.remarks = document.getElementById('editRemarks').value.trim();
+  if (!p.name) { showToast('⚠ Patient name is required'); return; }
+  saveState();
+  closeModal();
+  renderRoster();
+  renderCalendar();
+  showToast('✓ Patient record updated');
+}
+
+function deletePatient() {
+  if (!editingId) return;
+  if (!confirm('Delete this patient from the queue?')) return;
+  patients = patients.filter(p => p.id !== editingId);
+  saveState();
+  closeModal();
+  renderRoster();
+  renderCalendar();
+  showToast('Patient removed from queue');
+}
+
+// Close modal on overlay click
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
