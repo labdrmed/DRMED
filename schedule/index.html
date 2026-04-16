@@ -1732,26 +1732,37 @@ async function scheduleApi(method, path, body) {
   if (token) opts.headers['X-Staff-Session'] = token;
   if (body && (method === 'POST' || method === 'PATCH')) opts.body = JSON.stringify(body);
   const res = await fetch(base + path, opts);
-  const data = await res.json().catch(() => ({}));
+  const raw = await res.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    data = {};
+  }
   if (!res.ok) {
-    throw new Error(data.message || data.error || res.statusText || 'Request failed');
+    const msg = data.message || data.error || (raw && raw.slice(0, 180)) || res.statusText || 'Request failed';
+    throw new Error('HTTP ' + res.status + ': ' + msg);
   }
   return data;
 }
+/** @returns {{ ok: boolean, skipped?: boolean, message?: string }} */
 async function loadPatientsFromServer() {
   if (!getScheduleToken()) {
     patients = [];
-    return;
+    return { ok: true, skipped: true };
   }
   try {
     const data = await scheduleApi('GET', '/api/staff/schedule');
     if (data.status === 'success' && Array.isArray(data.items)) {
       patients = data.items;
+      return { ok: true };
     }
+    patients = [];
+    return { ok: false, message: 'Unexpected API response (missing items)' };
   } catch (e) {
     console.error(e);
-    showToast('Could not load queue: ' + (e.message || e));
     patients = [];
+    return { ok: false, message: e && e.message ? String(e.message) : String(e) };
   }
 }
 async function doScheduleLogin() {
@@ -1790,11 +1801,19 @@ async function doScheduleLogin() {
     sessionStorage.setItem('drmed_schedule_staff_token', data.staffSessionToken);
     document.getElementById('scheduleStaffPass').value = '';
     document.getElementById('scheduleStaffMfa').value = '';
-    await loadPatientsFromServer();
+    const loaded = await loadPatientsFromServer();
     updateScheduleApiBar();
     renderRoster();
     renderCalendar();
-    showToast('Connected — queue loaded from server');
+    if (!loaded.ok) {
+      showToast(
+        'Login OK — queue API failed: ' +
+          (loaded.message || 'unknown') +
+          ' · If HTTP 503: set SCHEDULE_SPREADSHEET_ID in Render (and sheet tab). If HTTP 404: deploy latest backend-node/server.js.'
+      );
+    } else {
+      showToast('Connected — loaded ' + patients.length + ' queue row(s) from server');
+    }
   } catch (e) {
     const m = e && e.message ? String(e.message) : 'Login error';
     if (/failed to fetch|networkerror|load failed/i.test(m)) {
@@ -1960,7 +1979,10 @@ function init() {
 
   (async () => {
     if (getScheduleToken()) {
-      await loadPatientsFromServer();
+      const loaded = await loadPatientsFromServer();
+      if (!loaded.ok && !loaded.skipped) {
+        showToast('Queue refresh failed: ' + (loaded.message || ''));
+      }
     }
     syncDayRollover(true);
   })();
