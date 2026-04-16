@@ -1387,6 +1387,43 @@
       grid-template-columns: 1fr;
     }
   }
+
+  /* Staff API sync bar (queue backed by api.staff.drmed.ph) */
+  .schedule-api-bar {
+    background: var(--blue-light);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .schedule-api-bar input {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    min-width: 140px;
+  }
+  .schedule-api-bar .schedule-api-status { font-weight: 600; color: var(--blue); }
+  .schedule-api-bar .schedule-api-status.off { color: var(--accent-2); }
+  .schedule-api-bar button {
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .schedule-api-bar button.secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
 </style>
 </head>
 <body>
@@ -1408,6 +1445,16 @@
   <button class="nav-tab" onclick="switchTab('availability')">Doctor Availability</button>
   <button class="nav-tab" onclick="switchTab('calendar')">Booking Calendar</button>
 </nav>
+
+<div id="scheduleApiBar" class="schedule-api-bar">
+  <span class="schedule-api-status off" id="scheduleApiStatus">Queue not synced — log in with staff credentials (same as release console).</span>
+  <input type="url" id="scheduleApiBase" placeholder="API base e.g. https://api.staff.drmed.ph" title="API base URL" style="flex:1;min-width:200px;max-width:320px">
+  <input type="text" id="scheduleStaffUser" placeholder="Staff user" autocomplete="username">
+  <input type="password" id="scheduleStaffPass" placeholder="Password" autocomplete="current-password">
+  <input type="text" id="scheduleStaffMfa" placeholder="MFA code (if enabled)" style="max-width:120px">
+  <button type="button" onclick="doScheduleLogin()">Connect</button>
+  <button type="button" class="secondary" onclick="scheduleLogout()">Disconnect</button>
+</div>
 
 <div class="container">
 
@@ -1640,15 +1687,109 @@ const DOCTORS = [
 ];
 
 // ===== STATE =====
-let patients = JSON.parse(localStorage.getItem('drmed_cms_patients_v1') || '[]');
+let patients = [];
 let availability = JSON.parse(localStorage.getItem('drmed_cms_avail_v1') || '{}');
 let editingId = null;
 let activeFilter = 'all';
 let activeCalendarDate = today();
 let lastKnownToday = today();
 
+const DEFAULT_SCHEDULE_API = 'https://api.staff.drmed.ph';
+
+function getScheduleApiBase() {
+  const raw = (localStorage.getItem('drmed_schedule_api_base') || DEFAULT_SCHEDULE_API).trim();
+  return raw.replace(/\/$/, '');
+}
+function getScheduleToken() {
+  return sessionStorage.getItem('drmed_schedule_staff_token') || '';
+}
+function scheduleLogout() {
+  sessionStorage.removeItem('drmed_schedule_staff_token');
+  patients = [];
+  updateScheduleApiBar();
+  renderRoster();
+  renderCalendar();
+  showToast('Disconnected from server');
+}
+function updateScheduleApiBar() {
+  const st = document.getElementById('scheduleApiStatus');
+  if (!st) return;
+  if (getScheduleToken()) {
+    st.textContent = 'Queue synced with server (patient rows). Doctor availability below is still stored in this browser only.';
+    st.className = 'schedule-api-status';
+  } else {
+    st.textContent = 'Queue not synced — log in with staff credentials (same as release console).';
+    st.className = 'schedule-api-status off';
+  }
+}
+async function scheduleApi(method, path, body) {
+  const base = getScheduleApiBase();
+  const token = getScheduleToken();
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' }
+  };
+  if (token) opts.headers['X-Staff-Session'] = token;
+  if (body && (method === 'POST' || method === 'PATCH')) opts.body = JSON.stringify(body);
+  const res = await fetch(base + path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || data.error || res.statusText || 'Request failed');
+  }
+  return data;
+}
+async function loadPatientsFromServer() {
+  if (!getScheduleToken()) {
+    patients = [];
+    return;
+  }
+  try {
+    const data = await scheduleApi('GET', '/api/staff/schedule');
+    if (data.status === 'success' && Array.isArray(data.items)) {
+      patients = data.items;
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('Could not load queue: ' + (e.message || e));
+    patients = [];
+  }
+}
+async function doScheduleLogin() {
+  const baseInput = document.getElementById('scheduleApiBase');
+  const base = (baseInput && baseInput.value.trim() ? baseInput.value.trim() : DEFAULT_SCHEDULE_API).replace(/\/$/, '');
+  localStorage.setItem('drmed_schedule_api_base', base);
+  const staffUser = document.getElementById('scheduleStaffUser').value.trim();
+  const password = document.getElementById('scheduleStaffPass').value;
+  const mfa = document.getElementById('scheduleStaffMfa').value.trim();
+  if (!staffUser || !password) {
+    showToast('Enter staff user and password');
+    return;
+  }
+  try {
+    const res = await fetch(base + '/api/staff/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staffUser, password, mfa: mfa || undefined })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.staffSessionToken) {
+      showToast((data.message || 'Login failed'));
+      return;
+    }
+    sessionStorage.setItem('drmed_schedule_staff_token', data.staffSessionToken);
+    document.getElementById('scheduleStaffPass').value = '';
+    document.getElementById('scheduleStaffMfa').value = '';
+    await loadPatientsFromServer();
+    updateScheduleApiBar();
+    renderRoster();
+    renderCalendar();
+    showToast('Connected — queue loaded from server');
+  } catch (e) {
+    showToast((e.message || 'Login error'));
+  }
+}
+
 function saveState() {
-  localStorage.setItem('drmed_cms_patients_v1', JSON.stringify(patients));
   localStorage.setItem('drmed_cms_avail_v1', JSON.stringify(availability));
 }
 
@@ -1797,7 +1938,17 @@ function init() {
     sel.appendChild(og);
   });
 
-  syncDayRollover(true);
+  const apiBaseEl = document.getElementById('scheduleApiBase');
+  if (apiBaseEl) apiBaseEl.value = getScheduleApiBase();
+  updateScheduleApiBar();
+
+  (async () => {
+    if (getScheduleToken()) {
+      await loadPatientsFromServer();
+    }
+    syncDayRollover(true);
+  })();
+
   setInterval(() => syncDayRollover(false), 60000);
 }
 
@@ -1925,7 +2076,7 @@ function onBookDoctorChange() {
   }
 }
 
-function addPatient() {
+async function addPatient() {
   const date = document.getElementById('bookDate').value;
   const docId = document.getElementById('bookDoctor').value;
   const name = document.getElementById('bookName').value.trim();
@@ -1934,29 +2085,50 @@ function addPatient() {
   const remarks = document.getElementById('bookRemarks').value.trim();
 
   if (!date || !docId || !name) {
-    showToast('⚠ Please fill in all required fields.');
+    showToast('Please fill in all required fields.');
     return;
   }
 
   if (getDay(date) === 0) {
-    showToast('⛔ Sunday bookings are not available. Please choose Monday to Saturday.');
+    showToast('Sunday bookings are not available. Please choose Monday to Saturday.');
     return;
   }
 
   const doc = DOCTORS.find(d => d.id === docId);
   if (!isAvailable(docId, date)) {
-    showToast('⛔ Cannot book — doctor is unavailable on this date.');
+    showToast('Cannot book — doctor is unavailable on this date.');
     return;
   }
 
-  patients.push({ id: genId(), date, docId, name, contact, status, remarks, createdAt: Date.now() });
-  saveState();
-  clearForm();
-  showToast(`✓ ${name} added to ${doc.name}'s queue!`);
-  switchTab('roster');
-  document.getElementById('rosterDate').value = date;
-  renderRoster();
-  renderCalendar();
+  if (!getScheduleToken()) {
+    showToast('Use Connect in the bar above (staff login) before adding patients.');
+    return;
+  }
+
+  try {
+    const data = await scheduleApi('POST', '/api/staff/schedule', {
+      date,
+      docId,
+      name,
+      contact,
+      status,
+      remarks
+    });
+    if (data.status === 'success' && data.item) {
+      patients.push(data.item);
+    } else {
+      await loadPatientsFromServer();
+    }
+    saveState();
+    clearForm();
+    showToast(name + ' added to ' + doc.name + "'s queue!");
+    switchTab('roster');
+    document.getElementById('rosterDate').value = date;
+    renderRoster();
+    renderCalendar();
+  } catch (e) {
+    showToast(e.message || 'Could not save patient to server');
+  }
 }
 
 function clearForm() {
@@ -2065,36 +2237,80 @@ function renderRoster() {
   document.getElementById('rosterGrid').innerHTML = html;
 }
 
-function setRosterStatus(patientId, nextStatus) {
+async function setRosterStatus(patientId, nextStatus) {
   const p = patients.find(x => x.id === patientId);
   if (!p) return;
-  p.status = nextStatus;
-  saveState();
-  renderRoster();
-  renderCalendar();
-  showToast(`Status updated: ${nextStatus}`);
+  if (!getScheduleToken()) {
+    showToast('Connect with staff login first.');
+    return;
+  }
+  try {
+    await scheduleApi('PATCH', '/api/staff/schedule', {
+      id: patientId,
+      status: nextStatus,
+      date: p.date,
+      docId: p.docId,
+      name: p.name,
+      contact: p.contact,
+      remarks: p.remarks
+    });
+    p.status = nextStatus;
+    saveState();
+    renderRoster();
+    renderCalendar();
+    showToast('Status updated: ' + nextStatus);
+  } catch (e) {
+    showToast(e.message || 'Update failed');
+  }
 }
 
-function toggleRosterArrived(patientId) {
+async function toggleRosterArrived(patientId) {
   const p = patients.find(x => x.id === patientId);
   if (!p) return;
+  if (!getScheduleToken()) {
+    showToast('Connect with staff login first.');
+    return;
+  }
   const markArrived = p.status !== 'Arrived';
-  p.status = markArrived ? 'Arrived' : 'Confirmed';
-  saveState();
-  renderRoster();
-  renderCalendar();
-  showToast(markArrived ? '✓ Patient marked as arrived' : 'Patient moved back to confirmed');
+  const next = markArrived ? 'Arrived' : 'Confirmed';
+  try {
+    await scheduleApi('PATCH', '/api/staff/schedule', {
+      id: patientId,
+      status: next,
+      date: p.date,
+      docId: p.docId,
+      name: p.name,
+      contact: p.contact,
+      remarks: p.remarks
+    });
+    p.status = next;
+    saveState();
+    renderRoster();
+    renderCalendar();
+    showToast(markArrived ? 'Patient marked as arrived' : 'Patient moved back to confirmed');
+  } catch (e) {
+    showToast(e.message || 'Update failed');
+  }
 }
 
-function quickDeletePatient(patientId) {
+async function quickDeletePatient(patientId) {
   const exists = patients.some(p => p.id === patientId);
   if (!exists) return;
-  patients = patients.filter(p => p.id !== patientId);
-  if (editingId === patientId) closeModal();
-  saveState();
-  renderRoster();
-  renderCalendar();
-  showToast('Patient removed from queue');
+  if (!getScheduleToken()) {
+    showToast('Connect with staff login first.');
+    return;
+  }
+  try {
+    await scheduleApi('DELETE', '/api/staff/schedule?id=' + encodeURIComponent(patientId));
+    patients = patients.filter(p => p.id !== patientId);
+    if (editingId === patientId) closeModal();
+    saveState();
+    renderRoster();
+    renderCalendar();
+    showToast('Patient removed from queue');
+  } catch (e) {
+    showToast(e.message || 'Delete failed');
+  }
 }
 
 function escHtml(s) {
@@ -2105,189 +2321,4 @@ function getDoctorById(docId) {
   return DOCTORS.find(d => d.id === docId);
 }
 
-function renderCalendar() {
-  const monthInput = document.getElementById('calendarMonth');
-  const grid = document.getElementById('bookingCalendarGrid');
-  if (!monthInput || !grid) return;
-
-  const monthValue = monthInput.value || today().slice(0, 7);
-  if (!monthInput.value) monthInput.value = monthValue;
-
-  if (!activeCalendarDate || activeCalendarDate.slice(0, 7) !== monthValue) {
-    activeCalendarDate = monthValue + '-01';
-  }
-
-  const [yearRaw, monthRaw] = monthValue.split('-');
-  const year = Number(yearRaw);
-  const month = Number(monthRaw);
-  if (!year || !month) return;
-
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0);
-
-  const gridStart = new Date(monthStart);
-  gridStart.setDate(gridStart.getDate() - gridStart.getDay());
-
-  const gridEnd = new Date(monthEnd);
-  gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
-
-  let htmlDays = '';
-  for (let d = new Date(gridStart); d <= gridEnd; d.setDate(d.getDate() + 1)) {
-    const dateStr = toDateStr(new Date(d));
-    const dayPatients = patients.filter(p => p.date === dateStr);
-    const confirmedCount = dayPatients.filter(p => p.status === 'Confirmed' || p.status === 'Arrived').length;
-    const isCurrentMonth = d.getMonth() === (month - 1);
-    const isActive = dateStr === activeCalendarDate;
-    const isToday = dateStr === today();
-
-    htmlDays += `
-      <button type="button" class="calendar-day ${isCurrentMonth ? '' : 'other-month'} ${isActive ? 'active' : ''} ${isToday ? 'today' : ''}" onclick="selectCalendarDate('${dateStr}')">
-        <span class="calendar-day-number">${d.getDate()}</span>
-        ${dayPatients.length ? `<span class="calendar-day-count">${dayPatients.length} queued</span>` : ''}
-        ${confirmedCount ? `<span class="calendar-day-confirmed">${confirmedCount} confirmed</span>` : ''}
-      </button>`;
-  }
-
-  grid.innerHTML = htmlDays;
-  renderCalendarDayDetails();
-}
-
-function selectCalendarDate(dateStr) {
-  activeCalendarDate = dateStr;
-  renderCalendar();
-}
-
-function renderCalendarDayDetails() {
-  const dayLabel = document.getElementById('calendarDayLabel');
-  const dayCount = document.getElementById('calendarDayCount');
-  const dayList = document.getElementById('calendarDayList');
-  if (!dayLabel || !dayCount || !dayList) return;
-
-  if (!activeCalendarDate) {
-    dayLabel.textContent = 'Select a date';
-    dayCount.textContent = '0 patients';
-    dayList.innerHTML = '<div class="calendar-empty">No date selected.</div>';
-    return;
-  }
-
-  const dayPatients = patients
-    .filter(p => p.date === activeCalendarDate)
-    .sort((a, b) => a.createdAt - b.createdAt);
-
-  const confirmedCount = dayPatients.filter(p => p.status === 'Confirmed' || p.status === 'Arrived').length;
-  dayLabel.textContent = formatDate(activeCalendarDate);
-  dayCount.textContent = `${dayPatients.length} patient${dayPatients.length !== 1 ? 's' : ''} · ${confirmedCount} confirmed`;
-
-  if (!dayPatients.length) {
-    dayList.innerHTML = '<div class="calendar-empty">No patients booked for this date.</div>';
-    return;
-  }
-
-  let htmlRows = '';
-  dayPatients.forEach(p => {
-    const doctor = getDoctorById(p.docId);
-    const confirmed = p.status === 'Confirmed' || p.status === 'Arrived';
-    const isCancelled = p.status === 'Cancelled';
-    htmlRows += `
-      <div class="calendar-entry">
-        <div class="calendar-entry-main">
-          <div class="calendar-entry-name">${escHtml(p.name)}</div>
-          <div class="calendar-entry-meta">${escHtml(p.contact || 'No contact number')} · ${escHtml(doctor ? doctor.name : 'Unknown Doctor')} (${escHtml(doctor ? doctor.spec : '-')})</div>
-        </div>
-        <span class="patient-status ${statusClass(p.status)}">${escHtml(p.status || 'Pending')}</span>
-        <div class="calendar-entry-actions">
-          <label class="calendar-confirm-wrap">
-            <input type="checkbox" ${confirmed ? 'checked' : ''} onchange="toggleCalendarConfirm('${p.id}', this.checked)">
-            <span>Confirmed</span>
-          </label>
-          <button type="button" class="calendar-cancel-btn ${isCancelled ? 'active' : ''}" onclick="toggleCalendarCancelled('${p.id}', ${isCancelled ? 'false' : 'true'})">${isCancelled ? 'Undo Cancel' : 'Cancelled'}</button>
-          <button type="button" class="calendar-delete-btn" aria-label="Delete patient" title="Delete patient" onclick="quickDeletePatient('${p.id}')">&times;</button>
-        </div>
-      </div>`;
-  });
-
-  dayList.innerHTML = htmlRows;
-}
-
-function toggleCalendarConfirm(patientId, checked) {
-  const p = patients.find(x => x.id === patientId);
-  if (!p) return;
-
-  if (checked) {
-    if (p.status !== 'Arrived') p.status = 'Confirmed';
-  } else {
-    p.status = 'Pending';
-  }
-
-  saveState();
-  renderRoster();
-  renderCalendar();
-  showToast(checked ? '✓ Patient marked as confirmed' : 'Patient moved to pending confirmation');
-}
-
-function toggleCalendarCancelled(patientId, shouldCancel) {
-  const p = patients.find(x => x.id === patientId);
-  if (!p) return;
-
-  p.status = shouldCancel ? 'Cancelled' : 'Pending';
-  saveState();
-  renderRoster();
-  renderCalendar();
-  showToast(shouldCancel ? 'Patient marked as cancelled' : 'Cancelled status removed');
-}
-
-// ===== EDIT MODAL =====
-function openEdit(patientId) {
-  const p = patients.find(x => x.id === patientId);
-  if (!p) return;
-  editingId = patientId;
-  document.getElementById('editName').value = p.name;
-  document.getElementById('editContact').value = p.contact;
-  document.getElementById('editStatus').value = p.status;
-  document.getElementById('editRemarks').value = p.remarks || '';
-  document.getElementById('editWarning').className = 'warning-banner';
-  document.getElementById('editModal').classList.add('open');
-}
-
-function closeModal() {
-  document.getElementById('editModal').classList.remove('open');
-  editingId = null;
-}
-
-function saveEdit() {
-  if (!editingId) return;
-  const p = patients.find(x => x.id === editingId);
-  if (!p) return;
-  p.name = document.getElementById('editName').value.trim();
-  p.contact = document.getElementById('editContact').value.trim();
-  p.status = document.getElementById('editStatus').value;
-  p.remarks = document.getElementById('editRemarks').value.trim();
-  if (!p.name) { showToast('⚠ Patient name is required'); return; }
-  saveState();
-  closeModal();
-  renderRoster();
-  renderCalendar();
-  showToast('✓ Patient record updated');
-}
-
-function deletePatient() {
-  if (!editingId) return;
-  if (!confirm('Delete this patient from the queue?')) return;
-  patients = patients.filter(p => p.id !== editingId);
-  saveState();
-  closeModal();
-  renderRoster();
-  renderCalendar();
-  showToast('Patient removed from queue');
-}
-
-// Close modal on overlay click
-document.getElementById('editModal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-
-// ===== START =====
-init();
-</script>
-</body>
-</html>
+function 
