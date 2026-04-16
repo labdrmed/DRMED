@@ -33,6 +33,8 @@ const SYNC_SOURCE_SHEET_NAME = process.env.SYNC_SOURCE_SHEET_NAME || 'CUSTOMER L
 const SYNC_TARGET_SPREADSHEET_ID = process.env.SYNC_TARGET_SPREADSHEET_ID || PATIENT_MASTER_SHEET_ID;
 const SYNC_TARGET_SHEET_NAME = process.env.SYNC_TARGET_SHEET_NAME || PATIENT_MASTER_SHEET_NAME;
 const PATIENT_MASTER_SYNC_WEBHOOK_TOKEN = process.env.PATIENT_MASTER_SYNC_WEBHOOK_TOKEN || '';
+const SCHEDULE_SPREADSHEET_ID = String(process.env.SCHEDULE_SPREADSHEET_ID || '').trim();
+const SCHEDULE_SHEET_TAB = process.env.SCHEDULE_SHEET_TAB || 'DoctorQueue';
 const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID || '';
 const RESULT_STORAGE = String(process.env.RESULT_STORAGE || 'drive').trim().toLowerCase();
 const USE_LOCAL_STORAGE = RESULT_STORAGE === 'local' || RESULT_STORAGE === 'filesystem';
@@ -200,6 +202,7 @@ function getDriveScopesForServiceAccount() {
 }
 
 let clientsPromise;
+let scheduleSheetGidCache = null;
 
 function getGoogleClients() {
   if (!clientsPromise) {
@@ -232,6 +235,80 @@ function getGoogleClients() {
     })();
   }
   return clientsPromise;
+}
+
+/* ----- Doctor queue / schedule (Google Sheet) ----- */
+function scheduleApiEnabled() {
+  return !!SCHEDULE_SPREADSHEET_ID;
+}
+
+async function getScheduleSheetGid(sheets) {
+  if (scheduleSheetGidCache != null) return scheduleSheetGidCache;
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SCHEDULE_SPREADSHEET_ID,
+    fields: 'sheets(properties(sheetId,title))'
+  });
+  const found = (meta.data.sheets || []).find((s) => s.properties && s.properties.title === SCHEDULE_SHEET_TAB);
+  if (!found) {
+    throw new Error(`Schedule tab "${SCHEDULE_SHEET_TAB}" not found in spreadsheet`);
+  }
+  scheduleSheetGidCache = found.properties.sheetId;
+  return scheduleSheetGidCache;
+}
+
+async function readScheduleDataRows(sheets) {
+  const range = `${SCHEDULE_SHEET_TAB}!A2:H`;
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SCHEDULE_SPREADSHEET_ID,
+    range
+  });
+  const values = res.data.values || [];
+  return values.map((row, i) => ({
+    rowNumber: i + 2,
+    date: row[0] || '',
+    docId: row[1] || '',
+    name: row[2] || '',
+    contact: row[3] || '',
+    status: row[4] || '',
+    remarks: row[5] || '',
+    created_at: row[6] || '',
+    id: row[7] || ''
+  }));
+}
+
+function scheduleRowToPatient(r) {
+  const createdAt = r.created_at ? Date.parse(r.created_at) : Date.now();
+  return {
+    id: r.id,
+    date: r.date,
+    docId: r.docId,
+    name: r.name,
+    contact: r.contact,
+    status: r.status,
+    remarks: r.remarks,
+    createdAt: Number.isFinite(createdAt) ? createdAt : Date.now()
+  };
+}
+
+async function deleteScheduleRow(sheets, rowNumber) {
+  const sheetId = await getScheduleSheetGid(sheets);
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SCHEDULE_SPREADSHEET_ID,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: 'ROWS',
+              startIndex: rowNumber - 1,
+              endIndex: rowNumber
+            }
+          }
+        }
+      ]
+    }
+  });
 }
 
 function getCredentialsFromEnv() {
@@ -2006,7 +2083,8 @@ app.get('/healthz', (_req, res) => {
     driveAuthMode: USE_LOCAL_STORAGE ? 'none' : DRIVE_AUTH_MODE,
     driveOAuthConfigured: USE_DRIVE_OAUTH_USER
       ? !!(GOOGLE_OAUTH_CLIENT_ID && GOOGLE_OAUTH_CLIENT_SECRET && GOOGLE_OAUTH_REFRESH_TOKEN)
-      : false
+      : false,
+    scheduleSheetConfigured: scheduleApiEnabled()
   });
 });
 
@@ -2266,6 +2344,167 @@ app.post('/api/staff/reports/bulk', async (req, res) => {
   } catch (err) {
     console.error('Staff bulk upload error:', err.message);
     return res.status(500).json({ status: 'error', message: err.message || 'Unable to process bulk upload.' });
+  }
+});
+
+/**
+ * Doctor queue / schedule (staff.drmed.ph/schedule)
+ * Sheet row 1: date | doctor_id | patient_name | contact | status | remarks | created_at | id
+ * Env: SCHEDULE_SPREADSHEET_ID, SCHEDULE_SHEET_TAB (default DoctorQueue)
+ */
+app.get('/api/staff/schedule', async (req, res) => {
+  if (!requireStaffAuth(req, res)) return;
+  if (!scheduleApiEnabled()) {
+    return res.status(503).json({
+      status: 'error',
+      message: 'Schedule API disabled. Set SCHEDULE_SPREADSHEET_ID and create the sheet tab (see README).'
+    });
+  }
+  const date = pickFirst(req.query && req.query.date, req.query && req.query.dateStr);
+  const doctorId = pickFirst(req.query && req.query.doctorId, req.query && req.query.docId);
+  try {
+    const { sheets } = await getGoogleClients();
+    let rows = await readScheduleDataRows(sheets);
+    rows = rows.filter((r) => r.id);
+    if (date) rows = rows.filter((r) => r.date === String(date).trim());
+    if (doctorId) rows = rows.filter((r) => r.docId === String(doctorId).trim());
+    const items = rows.map((r) => scheduleRowToPatient(r));
+    return res.json({ status: 'success', count: items.length, items });
+  } catch (err) {
+    console.error('Staff schedule list error:', err.message);
+    return res.status(500).json({ status: 'error', message: err.message || 'Unable to load schedule.' });
+  }
+});
+
+app.post('/api/staff/schedule', async (req, res) => {
+  if (!requireStaffAuth(req, res)) return;
+  if (!scheduleApiEnabled()) {
+    return res.status(503).json({ status: 'error', message: 'Schedule API disabled. Set SCHEDULE_SPREADSHEET_ID.' });
+  }
+  const body = req.body || {};
+  const date = pickFirst(body.date, body.dateStr);
+  const docId = pickFirst(body.docId, body.doctorId);
+  const name = pickFirst(body.name, body.patient_name, body.patientName);
+  const contact = String(pickFirst(body.contact, body.phone) || '').trim();
+  const status = String(pickFirst(body.status, 'Pending') || 'Pending').trim();
+  const remarks = String(pickFirst(body.remarks, '') || '').trim();
+  if (!date || !docId || !name) {
+    return res.status(400).json({ status: 'error', message: 'date, docId, and name are required.' });
+  }
+  const id = crypto.randomUUID();
+  const created_at = new Date().toISOString();
+  const row = [date, docId, String(name).trim(), contact, status, remarks, created_at, id];
+  try {
+    const { sheets } = await getGoogleClients();
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SCHEDULE_SPREADSHEET_ID,
+      range: `${SCHEDULE_SHEET_TAB}!A:H`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [row] }
+    });
+    await logStaffAuditEvent(req, 'staff_schedule_append', { id, date, docId, name: String(name).trim() });
+    return res.status(201).json({
+      status: 'success',
+      item: scheduleRowToPatient({
+        rowNumber: 0,
+        date,
+        docId,
+        name: String(name).trim(),
+        contact,
+        status,
+        remarks,
+        created_at,
+        id
+      })
+    });
+  } catch (err) {
+    console.error('Staff schedule append error:', err.message);
+    return res.status(500).json({ status: 'error', message: err.message || 'Unable to save schedule row.' });
+  }
+});
+
+app.patch('/api/staff/schedule', async (req, res) => {
+  if (!requireStaffAuth(req, res)) return;
+  if (!scheduleApiEnabled()) {
+    return res.status(503).json({ status: 'error', message: 'Schedule API disabled. Set SCHEDULE_SPREADSHEET_ID.' });
+  }
+  const body = req.body || {};
+  const id = String(pickFirst(body.id, body.rowId) || '').trim();
+  if (!id) {
+    return res.status(400).json({ status: 'error', message: 'id is required.' });
+  }
+  try {
+    const { sheets } = await getGoogleClients();
+    const rows = await readScheduleDataRows(sheets);
+    const found = rows.find((r) => r.id === id);
+    if (!found) {
+      return res.status(404).json({ status: 'error', message: 'Schedule row not found.' });
+    }
+    const merged = {
+      date: pickFirst(body.date, found.date),
+      docId: pickFirst(body.docId, body.doctorId, found.docId),
+      name: pickFirst(body.name, body.patient_name, found.name),
+      contact: pickFirst(body.contact, found.contact),
+      status: pickFirst(body.status, found.status),
+      remarks: pickFirst(body.remarks, found.remarks),
+      created_at: found.created_at,
+      id: found.id
+    };
+    const line = [
+      merged.date,
+      merged.docId,
+      String(merged.name || '').trim(),
+      String(merged.contact || '').trim(),
+      String(merged.status || '').trim(),
+      String(merged.remarks || '').trim(),
+      merged.created_at,
+      merged.id
+    ];
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SCHEDULE_SPREADSHEET_ID,
+      range: `${SCHEDULE_SHEET_TAB}!A${found.rowNumber}:H${found.rowNumber}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [line] }
+    });
+    await logStaffAuditEvent(req, 'staff_schedule_update', { id, status: merged.status });
+    return res.json({
+      status: 'success',
+      item: scheduleRowToPatient({ ...merged, rowNumber: found.rowNumber })
+    });
+  } catch (err) {
+    console.error('Staff schedule update error:', err.message);
+    return res.status(500).json({ status: 'error', message: err.message || 'Unable to update schedule row.' });
+  }
+});
+
+app.delete('/api/staff/schedule', async (req, res) => {
+  if (!requireStaffAuth(req, res)) return;
+  if (!scheduleApiEnabled()) {
+    return res.status(503).json({ status: 'error', message: 'Schedule API disabled. Set SCHEDULE_SPREADSHEET_ID.' });
+  }
+  const id = String(
+    pickFirst(
+      req.query && req.query.id,
+      req.body && req.body.id,
+      req.body && req.body.rowId
+    ) || ''
+  ).trim();
+  if (!id) {
+    return res.status(400).json({ status: 'error', message: 'id is required.' });
+  }
+  try {
+    const { sheets } = await getGoogleClients();
+    const rows = await readScheduleDataRows(sheets);
+    const found = rows.find((r) => r.id === id);
+    if (!found) {
+      return res.status(404).json({ status: 'error', message: 'Schedule row not found.' });
+    }
+    await deleteScheduleRow(sheets, found.rowNumber);
+    await logStaffAuditEvent(req, 'staff_schedule_delete', { id });
+    return res.json({ status: 'success', id });
+  } catch (err) {
+    console.error('Staff schedule delete error:', err.message);
+    return res.status(500).json({ status: 'error', message: err.message || 'Unable to delete schedule row.' });
   }
 });
 
