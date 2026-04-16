@@ -71,4 +71,6 @@ services:
  - key: SCHEDULE_SHEET_TAB
  value: DoctorQueue
  - key: ENABLE_STAFF_AUDIT_LOG
-        
+        value: "true"
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
