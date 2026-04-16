@@ -2833,4 +2833,5 @@ app.all('/api/portal/verify', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`DRMed backend listening 
+  console.log(`DRMed backend listening on :${PORT}`);
+});
