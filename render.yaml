@@ -64,9 +64,11 @@ services:
         sync: false
       - key: STAFF_GATE_USERS_JSON
         sync: false
-      - key: STAFF_SESSION_TOKEN_SECRET
-        sync: false
-      - key: ENABLE_STAFF_AUDIT_LOG
-        value: "true"
-      - key: GOOGLE_SERVICE_ACCOUNT_JSON
-        sync: false
+ - key: STAFF_SESSION_TOKEN_SECRET
+ sync: false
+ - key: SCHEDULE_SPREADSHEET_ID
+ sync: false
+ - key: SCHEDULE_SHEET_TAB
+ value: DoctorQueue
+ - key: ENABLE_STAFF_AUDIT_LOG
+        
