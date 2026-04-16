@@ -2052,7 +2052,7 @@ app.use(
       if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
       return callback(new Error('CORS origin denied'));
     },
-    methods: ['GET', 'POST', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Staff-User', 'X-Staff-Session'],
     maxAge: 86400
   })
